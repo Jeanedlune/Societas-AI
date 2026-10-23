@@ -129,6 +129,14 @@ func (s *Store) appendOnce(ctx context.Context, incoming *v1.ValidatedEvent) (Ap
 		if err != nil {
 			return fmt.Errorf("insert event: %w", err)
 		}
+		_, err = tx.ExecContext(ctx, `INSERT INTO event_outbox (
+			event_id, workspace_id, run_id, sequence, delivery_state, attempts,
+			available_at, created_at, updated_at
+		) VALUES (?, ?, ?, ?, 'pending', 0, ?, ?, ?)`, header.ID, header.WorkspaceID,
+			header.RunID, sequence, header.Timestamp, header.Timestamp, header.Timestamp)
+		if err != nil {
+			return fmt.Errorf("insert event outbox row: %w", err)
+		}
 		stored, err := s.decodeStored(sequence, envelopeJSON)
 		if err != nil {
 			return err

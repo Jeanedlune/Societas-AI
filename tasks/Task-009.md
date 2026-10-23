@@ -20,3 +20,9 @@ Implementasikan outbox insert dalam transaksi domain, dispatcher, delivery state
 
 ## Handoff
 Batasi retry dengan backoff dan observable error state.
+
+## Hasil
+- Migration SQLite 0004 membuat `event_outbox`, indeks kesiapan/stream, dan backfill untuk event yang sudah tersimpan.
+- `EventStore.Append` menulis event dan row `pending` dalam transaksi SQLite yang sama. Dispatcher hanya membaca outbox, mengambil event persisted by ID, lalu mengirimnya.
+- Lease berakhir dapat dipulihkan saat restart. Retry memakai ID event/idempotency yang sama, exponential backoff dengan batas, status `dead` dan error code stabil; `RetryDead` membuka retry operator.
+- Integration tests menutup database tepat setelah persistence, membuka kembali, lalu membuktikan event berhasil terkirim; retry juga diuji hingga dead-letter.

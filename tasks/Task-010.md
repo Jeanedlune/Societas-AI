@@ -20,3 +20,9 @@ Implementasikan topic routing, subscriber lifecycle, bounded queues, backpressur
 
 ## Handoff
 Jaga interface transport-neutral agar implementasi internal dapat berkembang.
+
+## Hasil
+- `eventbus.Bus.Publish` memakai validator/Event Store sebelum commit. Event hanya diteruskan melalui adapter `Deliver` yang dipanggil dispatcher atas row committed.
+- Subscriber memakai alamat envelope/topic, filter workspace/run opsional, channel bounded, lifecycle `Close`, dan replay historis berurutan.
+- Queue penuh melaporkan `BACKPRESSURE` tanpa memblokir writer; retry event mempertahankan event ID dan deduplikasi per subscription aktif. Tidak ada API pengiriman agent-ke-agent langsung.
+- Integration tests mencakup publish-persist-deliver, urutan per run, unsubscribe, backpressure, dan retry tanpa duplikasi yang terlihat.

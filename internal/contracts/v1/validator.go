@@ -10,6 +10,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/gowebpki/jcs"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 )
 
@@ -24,6 +25,7 @@ const (
 	CodeUnsupportedVersion ValidationCode = "UNSUPPORTED_VERSION"
 	CodeUnknownEventType   ValidationCode = "UNKNOWN_EVENT_TYPE"
 	CodeInvalidPayload     ValidationCode = "INVALID_PAYLOAD"
+	CodePayloadTooLarge    ValidationCode = "PAYLOAD_TOO_LARGE"
 )
 
 // ContractError carries a stable code and deliberately excludes input values
@@ -162,6 +164,17 @@ func (v *Validator) validatePayload(eventType EventType, raw []byte) error {
 	}
 	if err := v.payloads[eventType].Validate(instance); err != nil {
 		return validationError(CodeInvalidPayload)
+	}
+	canonical, err := jcs.Transform(raw)
+	if err != nil {
+		return validationError(CodeInvalidPayload)
+	}
+	limit := 8000
+	if eventType == EventToolCallCompleted {
+		limit = 16000
+	}
+	if len(canonical) > limit {
+		return validationError(CodePayloadTooLarge)
 	}
 	return nil
 }

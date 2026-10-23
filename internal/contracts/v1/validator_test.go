@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/gowebpki/jcs"
 )
 
 func TestValidatorAcceptsEventsAcrossMVPCategories(t *testing.T) {
@@ -117,6 +119,52 @@ func TestValidatorRejectsUnknownEventAndPayloadType(t *testing.T) {
 	if err := validator.ValidatePayload(EventWorkspaceCreated, []byte(`{"name":"demo"}`)); err != nil {
 		t.Fatalf("ValidatePayload() error = %v", err)
 	}
+}
+
+func TestPayloadSizeUsesCanonicalUTF8BytesAndEventSpecificLimit(t *testing.T) {
+	validator, err := NewValidator()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range []struct {
+		event   EventType
+		limit   int
+		payload func(string) []byte
+	}{
+		{EventToolCallRequested, 8000, func(value string) []byte {
+			return []byte(`{"tool_call_id":"tc_01ARZ3NDEKTSV4RRFFQ69G5FAV","tool":"browser.search","arguments":{"value":"` + value + `"}}`)
+		}},
+		{EventToolCallCompleted, 16000, func(value string) []byte {
+			return []byte(`{"tool_call_id":"tc_01ARZ3NDEKTSV4RRFFQ69G5FAV","status":"ok","duration_ms":0,"output":"` + value + `"}`)
+		}},
+	} {
+		for _, delta := range []int{0, 1} {
+			payload := sizedPayload(t, test.payload, test.limit+delta)
+			err := validator.ValidatePayload(test.event, payload)
+			if delta == 0 && err != nil {
+				t.Fatalf("%s exact %d-byte payload rejected: %v", test.event, test.limit, err)
+			}
+			if delta == 1 && !IsValidationCode(err, CodePayloadTooLarge) {
+				t.Fatalf("%s limit+1 error=%v, want %s", test.event, err, CodePayloadTooLarge)
+			}
+		}
+	}
+}
+
+func sizedPayload(t *testing.T, build func(string) []byte, target int) []byte {
+	t.Helper()
+	for size := target - 256; size <= target; size++ {
+		payload := build(strings.Repeat("x", size))
+		canonical, err := jcs.Transform(payload)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(canonical) == target {
+			return payload
+		}
+	}
+	t.Fatalf("could not construct payload with %d canonical bytes", target)
+	return nil
 }
 
 func validEnvelope(eventType EventType, payload json.RawMessage) []byte {
