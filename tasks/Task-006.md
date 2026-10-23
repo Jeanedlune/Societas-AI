@@ -20,3 +20,8 @@ Tambahkan registry event, version routing, validation errors, dan strict unknown
 
 ## Handoff
 Gunakan contract package dari Task-005; jangan membuat schema duplikat.
+
+## Hasil
+- `internal/contracts/v1.Validator` memvalidasi strict envelope dan payload memakai schema §72A yang di-embed; event serta versi protocol/schema dirutekan sebelum payload diterima.
+- Kode error stabil adalah `INVALID_JSON`, `INVALID_ENVELOPE`, `UNSUPPORTED_VERSION`, `UNKNOWN_EVENT_TYPE`, dan `INVALID_PAYLOAD`; error tidak membawa nilai field atau isi payload.
+- Unit tests mencakup event dari kategori workspace, control, run, task, communication, model, budget, policy, tool, artifact, summary, review, dan approval, serta missing principal, required field, unknown event/field, versi tak didukung, payload invalid, dan error redaction.

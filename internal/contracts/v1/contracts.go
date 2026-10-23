@@ -86,8 +86,9 @@ type DecodedEvent[P any] struct {
 	Payload P
 }
 
-// DecodePayload allocates the payload struct assigned to this event type.
-// Schema validation at untrusted boundaries belongs to Task-006.
+// DecodePayload allocates and decodes the payload struct assigned to this
+// event type. It does not validate the schema; untrusted input must first pass
+// Validator.ValidateEnvelope.
 func (e Envelope) DecodePayload() (any, error) {
 	definition, ok := Definition(e.Type)
 	if !ok {
