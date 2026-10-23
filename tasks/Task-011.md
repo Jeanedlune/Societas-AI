@@ -20,3 +20,9 @@ Implementasikan idempotency key storage, duplicate response behavior, replay rea
 
 ## Handoff
 Jangan menganggap event idempotency sebagai jaminan deduplikasi tool eksternal.
+
+## Hasil
+- Event Store membandingkan identitas command kanonik (workspace/run/task, jenis event, routing, principal, correlation, key, dan payload JCS). Retry identik dengan event ID baru mengembalikan event tersimpan; key/ID yang dipakai untuk request berbeda ditolak sebagai `IDEMPOTENCY_CONFLICT`.
+- `internal/replay` membaca stream persisten berhalaman dan memproyeksikan state run/task lifecycle. Snapshot kanonik mengurutkan task secara deterministik.
+- Tests mencakup conflict key, replay task deterministik, dan pemulihan state sesudah database ditutup/dibuka kembali.
+- Keputusan ini memperjelas I7 aktif: duplikasi hanya aman bila isi request sama; tool side effect eksternal tetap memerlukan deduplikasi provider terpisah.

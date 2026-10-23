@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"sync"
@@ -77,19 +78,18 @@ func TestAppendDeduplicatesEventIDAndIdempotencyPerRun(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	duplicateKey, err := store.Append(ctx, eventEnvelope(3, "RUN-001", "same-key", "different retry body"))
+	duplicateKey, err := store.Append(ctx, eventEnvelope(3, "RUN-001", "same-key", "first"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !duplicateKey.Duplicate || duplicateKey.Event.Event.Header.ID != v1.EventID(eventID(2)) {
 		t.Fatalf("idempotency retry did not return original event: %#v", duplicateKey)
 	}
-	duplicateID, err := store.Append(ctx, eventEnvelope(2, "RUN-001", "different-key", "different event body"))
-	if err != nil {
-		t.Fatal(err)
+	if _, err := store.Append(ctx, eventEnvelope(2, "RUN-001", "different-key", "different event body")); !errors.Is(err, ErrIdempotencyConflict) {
+		t.Fatalf("event ID reused with different request error=%v, want conflict", err)
 	}
-	if !duplicateID.Duplicate || duplicateID.Event.Event.Header.ID != v1.EventID(eventID(2)) {
-		t.Fatalf("event ID retry did not return original event: %#v", duplicateID)
+	if _, err := store.Append(ctx, eventEnvelope(4, "RUN-001", "same-key", "different retry body")); !errors.Is(err, ErrIdempotencyConflict) {
+		t.Fatalf("key reused with different payload error=%v, want conflict", err)
 	}
 	otherRun, err := store.Append(ctx, eventEnvelope(4, "RUN-002", "same-key", "other run"))
 	if err != nil {

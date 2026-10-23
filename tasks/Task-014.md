@@ -20,3 +20,8 @@ Implementasikan create/load, idle, working, waiting, blocked, stop, dan state-to
 
 ## Handoff
 Agent berhenti atau idle setelah task park/terminal dan tidak memegang worker kosong.
+
+## Hasil
+- `agent.Lifecycle` memvalidasi transisi dari graph lifecycle di Doc 03, membedakan status agent dari status task, dan membaca status durable dari SQLite.
+- Event kanonik `agent.status_changed` ditambahkan ke §72A.7 agar setiap transisi status dapat direplay, bukan menafsirkan `agent.started/stopped` untuk status lain.
+- CAS status, event, dan outbox row commit dalam satu transaksi; event retry identik idempotent dan transisi ilegal ditolak.

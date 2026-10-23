@@ -22,3 +22,9 @@ Implementasikan route config, tier mapping, fallback policy, rate limits, and re
 
 ## Handoff
 Tidak ada provider credential di prompt, event, atau UI.
+
+## Hasil
+- `internal/modelrouter` memilih hanya agent aktif, model enabled yang terdaftar, dan provider yang tersedia di registry.
+- Complexity memilih tier; risk high/critical menetapkan minimum tier sehingga fallback tidak dapat turun melewati kebijakan risiko. Fallback hanya dibaca dari daftar yang dikonfigurasi.
+- Sliding-window RPM/TPM membatasi request per provider. Penolakan rate limit mengembalikan retry duration terbatas, tanpa loop retry otomatis.
+- Unit tests mencakup route tier/risk, fallback terkonfigurasi, model disabled, dan metadata retry rate limit.

@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/Jeanedlune/Societas-AI/internal/config"
 )
 
 func TestApplicationProcessLifecycle(t *testing.T) {
@@ -17,8 +19,19 @@ func TestApplicationProcessLifecycle(t *testing.T) {
 		return
 	}
 
+	workspaceFile := t.TempDir()
+	workspaceConfig, err := config.DefaultWorkspaceYAML("smoke-workspace")
+	if err != nil {
+		t.Fatal(err)
+	}
+	configPath := workspaceFile + "/workspace.yaml"
+	if err := os.WriteFile(configPath, workspaceConfig, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	databasePath := workspaceFile + "/societas.db"
+
 	cmd := exec.Command(os.Args[0], "-test.run=^TestApplicationProcessLifecycle$")
-	cmd.Env = append(os.Environ(), "SOCIETAS_PROCESS_SMOKE=1", "SOCIETAS_ADDR=127.0.0.1:0")
+	cmd.Env = append(os.Environ(), "SOCIETAS_PROCESS_SMOKE=1", "SOCIETAS_SMOKE_CONFIG="+configPath, "SOCIETAS_SMOKE_DB="+databasePath, "SOCIETAS_ADDR=127.0.0.1:0")
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		t.Fatal(err)

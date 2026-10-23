@@ -22,3 +22,8 @@ Implementasikan provider adapter boundary, request/response types, capability di
 
 ## Handoff
 Provider pertama ditentukan oleh keputusan Task-001.
+
+## Hasil
+- `internal/provider` menyediakan interface netral `Generate`, `Stream`, dan `Capabilities` beserta request, response, usage, finish reason, chunk, dan error kanonik.
+- Registry provider dan resolver credential berbasis environment reference menjaga secret hanya tersedia bagi adapter tepercaya; error eksternal dipetakan ke catalog code dan pesan aman tanpa menyebarkan teks error vendor.
+- Adapter `Mock` deterministik mendukung test dan workflow lokal tanpa SDK provider tertentu. Unit tests mencakup registry, mock, timeout, dan redaksi error.

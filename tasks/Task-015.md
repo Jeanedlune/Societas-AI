@@ -20,3 +20,8 @@ Implementasikan status lifecycle, CAS transition, terminal behavior, ownership, 
 
 ## Handoff
 Jangan menambah status yang tidak ada di kontrak tanpa keputusan dan perubahan schema.
+
+## Hasil
+- `internal/taskstate` membuat task dari event `task.created` dan menyimpan row task + event + outbox atomik.
+- State transition mengikuti tabel §72A.6; event lifecycle menggerakkan CAS, update ownership, dan timestamp dalam satu transaksi. Retry event identik tidak mengulang side effect; terminal task tidak dapat dibuka kembali.
+- Tests mencakup pause/resume, approval, blocked, retry, terminal behavior, idempotent duplicate, dan dua concurrent start yang hanya menghasilkan satu transisi.

@@ -20,3 +20,8 @@ Implementasikan cycle detection, ready queue, fairness, limits, cancellation, da
 
 ## Handoff
 Scheduler decisions dapat dijelaskan melalui event/diagnostic reason.
+
+## Hasil
+- `internal/scheduler.BuildPlan` menolak dependency hilang, duplikat, cycle, fan-out berlebih, dan depth berlebih sebelum memilih kerja.
+- Ready queue hanya memilih task `ready` dengan dependency completed, budget reserved, dan owner agent aktif; priority didahulukan, lalu waktu penjadwalan lama dan ID sebagai tie-breaker.
+- Parallelism limit, reason keputusan, dependency failure, cancellation, dan reschedule eligibility tersedia secara deterministic dengan tests DAG paralel/saturation.

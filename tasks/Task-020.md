@@ -20,3 +20,9 @@ Implementasikan defaults per scope, reserve estimates, child allocation, and max
 
 ## Handoff
 Jelaskan unit dan currency untuk seluruh limit.
+
+## Hasil
+- `internal/budget` menerapkan finite defaults per workspace/run/task/agent sesuai matrix Doc 10; configured nonzero limits override fallback. Limit nol di config tetap mengikuti kontrak config: gunakan default, bukan unlimited.
+- Child budget di-reserve secara atomik oleh manager yang mengunci sibling allocation; seluruh dimensi diperiksa sebelum grant. Request berlebih memakai `BUDGET_EXCEEDED`; retry allocation identik idempotent, sedangkan key yang sama dengan limit berbeda ditolak.
+- Settlement memeriksa penggunaan aktual, melepas sisa reservasi, mengenakan usage pada parent satu kali, dan menurunkan pemakaian token total bila tidak diberikan sebagai jumlah input + output.
+- Unit: token/model call/tool call/message/rebuttal/parallel agent adalah hitungan integer; waktu adalah detik; biaya adalah USD desimal (`float64`). Unit tests mencakup defaults finite, batas token/biaya, settlement, idempotency, dan alokasi sibling concurrent tanpa oversubscribe.

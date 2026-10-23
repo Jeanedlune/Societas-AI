@@ -7,20 +7,21 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/Jeanedlune/Societas-AI/internal/server"
+	"github.com/Jeanedlune/Societas-AI/internal/cli"
 )
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	addr := os.Getenv("SOCIETAS_ADDR")
-	if addr == "" {
-		addr = "127.0.0.1:7443"
+	args := os.Args[1:]
+	if os.Getenv("SOCIETAS_PROCESS_SMOKE") == "1" {
+		args = []string{"serve", "--config", os.Getenv("SOCIETAS_SMOKE_CONFIG"), "--db", os.Getenv("SOCIETAS_SMOKE_DB")}
+	} else if len(args) == 0 {
+		args = []string{"serve"}
 	}
-
-	if err := server.Run(ctx, addr, os.Stdout); err != nil {
-		slog.Error("server stopped with an error", "error", err)
+	if err := cli.Execute(ctx, args, os.Stdout, os.Stderr); err != nil {
+		slog.Error("societas command failed", "error", err)
 		os.Exit(1)
 	}
 }

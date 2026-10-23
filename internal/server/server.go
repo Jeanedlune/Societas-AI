@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -12,26 +11,20 @@ import (
 )
 
 // NewHandler returns the HTTP handlers available during application bootstrap.
-func NewHandler() http.Handler {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			w.Header().Set("Allow", http.MethodGet)
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		_ = json.NewEncoder(w).Encode(struct {
-			Status string `json:"status"`
-		}{Status: "ok"})
-	})
-	return mux
+func NewHandler(options ...APIOptions) http.Handler {
+	var opts APIOptions
+	if len(options) > 0 {
+		opts = options[0]
+	}
+	return NewAPIHandler(opts)
 }
 
 // Run serves HTTP until ctx is cancelled, then gracefully shuts down.
 func Run(ctx context.Context, addr string, ready io.Writer) error {
+	return RunWithOptions(ctx, addr, ready, APIOptions{})
+}
+
+func RunWithOptions(ctx context.Context, addr string, ready io.Writer, options APIOptions) error {
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		return fmt.Errorf("listen on %s: %w", addr, err)
@@ -42,7 +35,7 @@ func Run(ctx context.Context, addr string, ready io.Writer) error {
 	}
 
 	httpServer := &http.Server{
-		Handler:           NewHandler(),
+		Handler:           NewHandler(options),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 	serveErr := make(chan error, 1)

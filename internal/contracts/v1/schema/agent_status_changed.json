@@ -1,0 +1,44 @@
+{
+  "$id": "urn:societas:1:agent_status_changed",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "agent_id",
+    "previous_status",
+    "status"
+  ],
+  "properties": {
+    "agent_id": {
+      "$ref": "urn:societas:1:common#/$defs/agent_id"
+    },
+    "previous_status": {
+      "enum": [
+        "created",
+        "idle",
+        "working",
+        "waiting",
+        "blocked",
+        "approval_required",
+        "completed",
+        "stopped"
+      ]
+    },
+    "status": {
+      "enum": [
+        "created",
+        "idle",
+        "working",
+        "waiting",
+        "blocked",
+        "approval_required",
+        "completed",
+        "stopped"
+      ]
+    },
+    "reason": {
+      "type": "string",
+      "maxLength": 500
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

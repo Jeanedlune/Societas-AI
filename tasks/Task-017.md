@@ -20,3 +20,9 @@ Validasi assignee terhadap registry, policy, dependency, budget, depth, fan-out,
 
 ## Handoff
 Simpan rationale delegation pada task/event untuk audit keputusan routing.
+
+## Hasil
+- `internal/delegation` menerima request delegasi tervalidasi dan hanya memanggil interface Orchestrator untuk membuat task; agent tidak memperoleh jalur pembuatan task langsung.
+- Assignee eksplisit harus ada di registry, aktif, di bawah parallelism limit, dan diizinkan policy. Blind routing memilih agent aktif dengan beban terendah, lalu ID sebagai tie-breaker.
+- Depth, fan-out, child count, dan seluruh dimensi budget diperiksa sebelum task dibuat. Rejection membawa code stabil; rationale dan alasan routing diteruskan dalam `Decision` untuk disimpan Orchestrator.
+- Unit tests mencakup assignee valid/tidak dikenal, blind route, permission deny, limit/budget exceeded, dan memastikan Orchestrator hanya dipanggil untuk request valid.

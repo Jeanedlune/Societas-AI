@@ -22,3 +22,9 @@ Implementasikan `init`, `serve`, `start`, `status`, dan `stop` sesuai keputusan 
 
 ## Handoff
 Jangan menambah command implementasi engineering/development workflow.
+
+## Hasil
+- CLI menyediakan `init`, `serve`, `start`, `status`, dan `stop`. `init` menghasilkan YAML minimal yang tervalidasi, finite-budget, dan tidak mengandung credential literal.
+- `serve` memberi error config dengan path field, membuka/migrasi SQLite, menyinkronkan workspace dan safe agent metadata, lalu menjalankan API/readiness. `start` membuat proses background dengan PID/instance identity; `stop` hanya mengirim interrupt setelah identitas service cocok dengan readiness endpoint.
+- Process smoke test menggunakan config hasil init dan memeriksa startup, health, serta shutdown graceful. Unit tests memeriksa config secret-free, bootstrap DB, dan petunjuk config invalid.
+- Jalur pemakaian dan command dicatat di README.

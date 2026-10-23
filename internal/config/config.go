@@ -272,6 +272,31 @@ func DefaultBudget() BudgetConfig {
 	}
 }
 
+// DefaultWorkspaceYAML creates a minimal, secret-free workspace configuration
+// suitable for the local init command.
+func DefaultWorkspaceYAML(name string) ([]byte, error) {
+	if strings.TrimSpace(name) == "" {
+		name = "general-workspace"
+	}
+	cfg := Config{
+		Version: "1", Workspace: WorkspaceConfig{Name: name}, Server: ServerConfig{Host: "127.0.0.1", Port: 7443},
+		Transport: TransportConfig{EventBus: "go-channel"},
+		Providers: map[string]ProviderConfig{"mock": {Credentials: map[string]string{}, Options: map[string]string{}}},
+		Models:    map[string]string{"default": "mock/default"},
+		Agents:    map[string]AgentConfig{"coordinator": {Role: "Coordinator", SystemPrompt: "Coordinate workspace tasks and ask for human approval before external actions.", Provider: "mock", Model: "mock/default", Autonomy: 1, Tools: []string{}, Permissions: map[string]PermissionConfig{}}},
+		Budget:    DefaultBudget(), ToolCapabilities: map[string]ToolCapabilityConfig{}, EscalationLead: "human",
+	}
+	cfg.ApplyDefaults()
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+	data, err := yaml.Marshal(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("encode default workspace config: %w", err)
+	}
+	return data, nil
+}
+
 // Validate reports configuration errors with the offending field path.
 func (c Config) Validate() error {
 	if c.Version != "1" {

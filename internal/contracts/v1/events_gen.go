@@ -8,6 +8,7 @@ const (
 	EventAgentCreated           EventType = "agent.created"
 	EventAgentStarted           EventType = "agent.started"
 	EventAgentStopped           EventType = "agent.stopped"
+	EventAgentStatusChanged     EventType = "agent.status_changed"
 	EventRunCreated             EventType = "run.created"
 	EventRunStopped             EventType = "run.stopped"
 	EventTaskDelegateRequested  EventType = "task.delegate_requested"
@@ -58,6 +59,7 @@ var eventDefinitions = [...]EventDefinition{
 	{Type: EventAgentCreated, PayloadSchemaID: "urn:societas:1:agent_lifecycle", From: "system:orchestrator", To: "topic:all"},
 	{Type: EventAgentStarted, PayloadSchemaID: "urn:societas:1:agent_lifecycle", From: "system:scheduler", To: "topic:all"},
 	{Type: EventAgentStopped, PayloadSchemaID: "urn:societas:1:agent_lifecycle", From: "system:scheduler", To: "topic:all"},
+	{Type: EventAgentStatusChanged, PayloadSchemaID: "urn:societas:1:agent_status_changed", From: "system:orchestrator", To: "topic:all"},
 	{Type: EventRunCreated, PayloadSchemaID: "urn:societas:1:run_created", From: "human", To: "system:orchestrator"},
 	{Type: EventRunStopped, PayloadSchemaID: "urn:societas:1:run_stopped", From: "system:orchestrator", To: "human"},
 	{Type: EventTaskDelegateRequested, PayloadSchemaID: "urn:societas:1:delegate_requested", From: "agent", To: "system:orchestrator"},
@@ -129,6 +131,8 @@ func NewPayload(eventType EventType) (any, error) {
 		return &AgentLifecycle{}, nil
 	case EventAgentStopped:
 		return &AgentLifecycle{}, nil
+	case EventAgentStatusChanged:
+		return &AgentStatusChanged{}, nil
 	case EventRunCreated:
 		return &RunCreated{}, nil
 	case EventRunStopped:

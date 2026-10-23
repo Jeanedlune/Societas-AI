@@ -20,3 +20,9 @@ Implementasikan endpoint workspace, agents, runs, health, readiness, dan version
 
 ## Handoff
 Gunakan address/bind defaults yang tidak mengekspos service ke jaringan tanpa konfigurasi.
+
+## Hasil
+- Health liveness (`/health`) terpisah dari readiness (`/ready`), yang memeriksa koneksi SQLite dan melaporkan dependency failure dengan HTTP 503.
+- API read-only versi v1 menyediakan daftar/detail workspace, agent, dan run. Response/error memakai envelope konsisten serta `X-Request-ID`.
+- Data agent hanya mengembalikan ID, display name, role, dan status; `config_json` maupun credential reference tidak diekspos. API default hanya menerima loopback; bind remote memerlukan bearer token.
+- Integration tests mencakup endpoint valid, secret redaction, request ID, read-only behavior, unauthorized, resource missing, dan readiness saat DB mati.

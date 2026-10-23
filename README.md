@@ -7,15 +7,20 @@ urutan onboarding mengikuti peta dokumen di bawah.
 
 ## Menjalankan Server Lokal
 
-Persyaratan: Go 1.26 atau lebih baru. Bootstrap saat ini menyediakan HTTP API minimal tanpa dependency eksternal.
+Persyaratan: Go 1.26 atau lebih baru.
 
 ```bash
-go run ./cmd/societas
+go run ./cmd/societas init
+go run ./cmd/societas serve
 ```
 
-Server bind ke `127.0.0.1:7443` secara default. Periksa statusnya di `http://127.0.0.1:7443/health`; respons sukses adalah `{"status":"ok"}`. Tekan `Ctrl+C` untuk shutdown dengan graceful.
+`init` membuat `workspace.yaml` minimal tanpa credential. `serve` memvalidasinya, membuka `societas.db` di direktori yang sama, menyinkronkan metadata workspace/agent, lalu menjalankan server. Bind default `127.0.0.1:7443`. Periksa `http://127.0.0.1:7443/health` untuk liveness dan `/ready` untuk readiness. Tekan `Ctrl+C` untuk graceful shutdown.
 
-Untuk mengubah alamat bind, atur `SOCIETAS_ADDR`, misalnya `SOCIETAS_ADDR=127.0.0.1:8080 go run ./cmd/societas`. Server tidak memerlukan credential atau file konfigurasi pada tahap bootstrap ini.
+API read-only berversi tersedia pada `/api/v1/workspaces`, `/api/v1/workspaces/{workspace_id}`, `/agents`, dan `/runs`. `/ready` memeriksa database operasional terpisah dari liveness `/health`. Endpoint workspace dibatasi ke loopback; jika dibind ke alamat non-loopback, set `SOCIETAS_API_TOKEN` dan kirim `Authorization: Bearer <token>`.
+
+Service dapat dijalankan di background dengan `go run ./cmd/societas start`; gunakan `status` untuk memeriksa readiness dan `stop` untuk menghentikannya. `serve` tetap tersedia untuk foreground dan development.
+
+Untuk mengubah alamat bind, atur `SOCIETAS_ADDR`, misalnya `SOCIETAS_ADDR=127.0.0.1:8080 go run ./cmd/societas serve`. Credential provider opsional dibaca melalui environment reference di `workspace.yaml`; secret literal tidak disimpan di konfigurasi.
 
 Jalankan smoke test lifecycle dan endpoint dengan `go test ./...`.
 

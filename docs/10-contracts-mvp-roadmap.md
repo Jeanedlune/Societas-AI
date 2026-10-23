@@ -26,7 +26,7 @@ Aturan ini ditegakkan oleh runtime, bukan oleh prompt agent.
 | I4 | Tidak ada model call tanpa `budget.reserved` dan keputusan policy `allow`. Setiap model call harus di-settle (`budget.settled`) dengan usage nyata. | Token Guard (5A.15) |
 | I5 | Konten inline dibatasi atas **seluruh payload JSON terserialisasi**, termasuk semua field dan nested object, dalam byte UTF-8: default 8.000 byte untuk event selain `tool.call_completed`, dan 16.000 byte untuk `tool.call_completed`. Batas string pada schema tetap berlaku secara terpisah. Yang lebih besar harus menjadi artifact + summary. | Event Bus (guard di boundary sebelum persistence/delivery) |
 | I6 | Event bersifat immutable dan append-only. Event store memberi `seq` yang naik monoton per run. | Event Store |
-| I7 | `idempotency_key` yang sama dalam satu run diabaikan dan dijawab dengan hasil sebelumnya. | Event Bus |
+| I7 | `idempotency_key` yang sama dalam satu run dan untuk identitas request/payload yang sama diabaikan serta dijawab dengan hasil sebelumnya. Pemakaian ulang key untuk request/payload berbeda ditolak sebagai `IDEMPOTENCY_CONFLICT`. | Event Bus |
 | I8 | Setiap event punya `correlation_id` (konstan per permintaan user) dan `causation_id` (event penyebab), kecuali event root (`run.created`). | Event Bus |
 | I9 | `type` tidak dikenal, atau payload yang tidak lolos schema, ditolak dengan `SCHEMA_VALIDATION_FAILED`. | Validator di boundary |
 | I10 | Output LLM yang harus terstruktur (delegation, tool call) diparse sebagai JSON dan divalidasi. Jika gagal, agent diminta memperbaiki maksimal 2 kali, dihitung dalam retry budget. | Agent Runtime |
@@ -523,6 +523,7 @@ Memperluas daftar event di #11. Setiap `type` punya tepat satu schema payload. E
 | `agent.created` | `agent_lifecycle` | `system:orchestrator` → `topic:all` |
 | `agent.started` | `agent_lifecycle` | `system:scheduler` → `topic:all` |
 | `agent.stopped` | `agent_lifecycle` | `system:scheduler` → `topic:all` |
+| `agent.status_changed` | `agent_status_changed` | `system:orchestrator` → `topic:all` |
 | `run.created` | `run_created` | `human` → `system:orchestrator` |
 | `run.stopped` | `run_stopped` | `system:orchestrator` → `human` |
 | `task.delegate_requested` | `delegate_requested` | `agent` → `system:orchestrator` |
@@ -605,6 +606,17 @@ Memperluas daftar event di #11. Setiap `type` punya tepat satu schema payload. E
     "type": "object", "additionalProperties": false, "required": ["agent_id"],
     "properties": {
       "agent_id": { "$ref": "urn:societas:1:common#/$defs/agent_id" },
+      "reason": { "type": "string", "maxLength": 500 }
+    }
+  },
+  {
+    "$id": "urn:societas:1:agent_status_changed",
+    "type": "object", "additionalProperties": false,
+    "required": ["agent_id", "previous_status", "status"],
+    "properties": {
+      "agent_id": { "$ref": "urn:societas:1:common#/$defs/agent_id" },
+      "previous_status": { "enum": ["created", "idle", "working", "waiting", "blocked", "approval_required", "completed", "stopped"] },
+      "status": { "enum": ["created", "idle", "working", "waiting", "blocked", "approval_required", "completed", "stopped"] },
       "reason": { "type": "string", "maxLength": 500 }
     }
   }

@@ -11,6 +11,7 @@ import (
 
 	"github.com/Jeanedlune/Societas-AI/internal/contracts/v1"
 	storage "github.com/Jeanedlune/Societas-AI/internal/storage/sqlite"
+	"github.com/gowebpki/jcs"
 	modernsqlite "modernc.org/sqlite"
 )
 
@@ -67,6 +68,9 @@ func (s *Store) Append(ctx context.Context, rawEnvelope []byte) (AppendResult, e
 			return result, nil
 		}
 		if previous, found, lookupErr := s.findDuplicate(ctx, s.db, validated.Header); lookupErr == nil && found {
+			if !sameRequest(previous.Event.Header, validated.Header) {
+				return AppendResult{}, ErrIdempotencyConflict
+			}
 			return AppendResult{Event: previous, Duplicate: true}, nil
 		}
 		if !isSQLiteBusy(err) {
@@ -91,63 +95,83 @@ func (s *Store) Append(ctx context.Context, rawEnvelope []byte) (AppendResult, e
 func (s *Store) appendOnce(ctx context.Context, incoming *v1.ValidatedEvent) (AppendResult, error) {
 	var result AppendResult
 	err := storage.WithTx(ctx, s.db, nil, func(tx *sql.Tx) error {
-		previous, found, err := s.findDuplicate(ctx, tx, incoming.Header)
-		if err != nil {
-			return err
-		}
-		if found {
-			result = AppendResult{Event: previous, Duplicate: true}
-			return nil
-		}
-
-		header := incoming.Header
-		var current int64
-		if err := tx.QueryRowContext(ctx, `SELECT COALESCE(MAX(sequence), 0) FROM events WHERE workspace_id=? AND run_id=?`, header.WorkspaceID, header.RunID).Scan(&current); err != nil {
-			return fmt.Errorf("read run sequence: %w", err)
-		}
-		if current == math.MaxInt64 {
-			return ErrSequenceExhausted
-		}
-		sequence := uint64(current + 1)
-		header.Sequence = &sequence
-		envelopeJSON, err := json.Marshal(header)
-		if err != nil {
-			return fmt.Errorf("encode stored event envelope: %w", err)
-		}
-		var idempotency any
-		if header.IdempotencyKey != "" {
-			idempotency = header.IdempotencyKey
-		}
-		_, err = tx.ExecContext(ctx, `INSERT INTO events (
-			event_id, workspace_id, run_id, task_id, sequence, event_type, schema_version,
-			correlation_id, causation_id, idempotency_key, payload_json, envelope_json, created_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			header.ID, header.WorkspaceID, header.RunID, nullableString(header.TaskID), sequence,
-			header.Type, header.SchemaVersion, header.CorrelationID, nullableString(header.CausationID),
-			idempotency, string(header.Payload), string(envelopeJSON), header.Timestamp,
-		)
-		if err != nil {
-			return fmt.Errorf("insert event: %w", err)
-		}
-		_, err = tx.ExecContext(ctx, `INSERT INTO event_outbox (
-			event_id, workspace_id, run_id, sequence, delivery_state, attempts,
-			available_at, created_at, updated_at
-		) VALUES (?, ?, ?, ?, 'pending', 0, ?, ?, ?)`, header.ID, header.WorkspaceID,
-			header.RunID, sequence, header.Timestamp, header.Timestamp, header.Timestamp)
-		if err != nil {
-			return fmt.Errorf("insert event outbox row: %w", err)
-		}
-		stored, err := s.decodeStored(sequence, envelopeJSON)
-		if err != nil {
-			return err
-		}
-		result = AppendResult{Event: stored}
-		return nil
+		var err error
+		result, err = s.appendValidatedTx(ctx, tx, incoming)
+		return err
 	})
 	if err != nil {
 		return AppendResult{}, err
 	}
 	return result, nil
+}
+
+// AppendInTx appends a validated event and outbox row inside a caller-owned
+// transaction, allowing state changes and their events to commit atomically.
+func (s *Store) AppendInTx(ctx context.Context, tx *sql.Tx, rawEnvelope []byte) (AppendResult, error) {
+	if tx == nil {
+		return AppendResult{}, fmt.Errorf("append transaction is required")
+	}
+	validated, err := s.validator.ValidateEnvelope(rawEnvelope)
+	if err != nil {
+		return AppendResult{}, err
+	}
+	if validated.Header.Sequence != nil {
+		return AppendResult{}, ErrSequenceAlreadyAssigned
+	}
+	return s.appendValidatedTx(ctx, tx, validated)
+}
+
+func (s *Store) appendValidatedTx(ctx context.Context, tx *sql.Tx, incoming *v1.ValidatedEvent) (AppendResult, error) {
+	previous, found, err := s.findDuplicate(ctx, tx, incoming.Header)
+	if err != nil {
+		return AppendResult{}, err
+	}
+	if found {
+		if !sameRequest(previous.Event.Header, incoming.Header) {
+			return AppendResult{}, ErrIdempotencyConflict
+		}
+		return AppendResult{Event: previous, Duplicate: true}, nil
+	}
+	header := incoming.Header
+	var current int64
+	if err := tx.QueryRowContext(ctx, `SELECT COALESCE(MAX(sequence), 0) FROM events WHERE workspace_id=? AND run_id=?`, header.WorkspaceID, header.RunID).Scan(&current); err != nil {
+		return AppendResult{}, fmt.Errorf("read run sequence: %w", err)
+	}
+	if current == math.MaxInt64 {
+		return AppendResult{}, ErrSequenceExhausted
+	}
+	sequence := uint64(current + 1)
+	header.Sequence = &sequence
+	envelopeJSON, err := json.Marshal(header)
+	if err != nil {
+		return AppendResult{}, fmt.Errorf("encode stored event envelope: %w", err)
+	}
+	var idempotency any
+	if header.IdempotencyKey != "" {
+		idempotency = header.IdempotencyKey
+	}
+	_, err = tx.ExecContext(ctx, `INSERT INTO events (
+		event_id, workspace_id, run_id, task_id, sequence, event_type, schema_version,
+		correlation_id, causation_id, idempotency_key, payload_json, envelope_json, created_at
+	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, header.ID, header.WorkspaceID,
+		header.RunID, nullableString(header.TaskID), sequence, header.Type, header.SchemaVersion,
+		header.CorrelationID, nullableString(header.CausationID), idempotency, string(header.Payload), string(envelopeJSON), header.Timestamp)
+	if err != nil {
+		return AppendResult{}, fmt.Errorf("insert event: %w", err)
+	}
+	_, err = tx.ExecContext(ctx, `INSERT INTO event_outbox (
+		event_id, workspace_id, run_id, sequence, delivery_state, attempts,
+		available_at, created_at, updated_at
+	) VALUES (?, ?, ?, ?, 'pending', 0, ?, ?, ?)`, header.ID, header.WorkspaceID,
+		header.RunID, sequence, header.Timestamp, header.Timestamp, header.Timestamp)
+	if err != nil {
+		return AppendResult{}, fmt.Errorf("insert event outbox row: %w", err)
+	}
+	stored, err := s.decodeStored(sequence, envelopeJSON)
+	if err != nil {
+		return AppendResult{}, err
+	}
+	return AppendResult{Event: stored}, nil
 }
 
 // ReadRun returns events in sequence order strictly after afterSequence.
@@ -250,6 +274,45 @@ func (s *Store) findDuplicate(ctx context.Context, queryer rowQueryer, incoming 
 	return event, true, nil
 }
 
+// sameRequest compares command identity while ignoring fields assigned per
+// transport attempt (event ID and timestamp). The idempotency key is scoped to
+// one workspace/run and cannot be reused for a different command or payload.
+func sameRequest(stored, incoming v1.Envelope) bool {
+	type identity struct {
+		WorkspaceID v1.WorkspaceID   `json:"workspace_id"`
+		RunID       v1.RunID         `json:"run_id"`
+		TaskID      *v1.TaskID       `json:"task_id"`
+		Type        v1.EventType     `json:"type"`
+		Correlation v1.CorrelationID `json:"correlation_id"`
+		Causation   *v1.EventID      `json:"causation_id"`
+		Idempotency string           `json:"idempotency_key"`
+		TraceID     string           `json:"trace_id"`
+		From        string           `json:"from"`
+		To          string           `json:"to"`
+		Principal   v1.Principal     `json:"principal"`
+		Payload     json.RawMessage  `json:"payload"`
+	}
+	canonical := func(envelope v1.Envelope) ([]byte, error) {
+		value := identity{envelope.WorkspaceID, envelope.RunID, envelope.TaskID, envelope.Type,
+			envelope.CorrelationID, envelope.CausationID, envelope.IdempotencyKey, envelope.TraceID,
+			envelope.From, envelope.To, envelope.Principal, envelope.Payload}
+		raw, err := json.Marshal(value)
+		if err != nil {
+			return nil, err
+		}
+		return jcs.Transform(raw)
+	}
+	left, err := canonical(stored)
+	if err != nil {
+		return false
+	}
+	right, err := canonical(incoming)
+	if err != nil {
+		return false
+	}
+	return string(left) == string(right)
+}
+
 func (s *Store) getDuplicate(ctx context.Context, queryer rowQueryer, query string, args ...any) (StoredEvent, error) {
 	var sequence int64
 	var raw []byte
@@ -282,4 +345,5 @@ var (
 	ErrSequenceAlreadyAssigned = errors.New("event sequence is assigned by the store")
 	ErrSequenceExhausted       = errors.New("event sequence exhausted")
 	ErrCorruptEventRecord      = errors.New("stored event record is corrupt")
+	ErrIdempotencyConflict     = errors.New("idempotency key was reused for a different request")
 )
