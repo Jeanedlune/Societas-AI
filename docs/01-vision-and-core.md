@@ -256,12 +256,13 @@ Agent adalah entitas AI yang memiliki:
 id: market_researcher
 name: Market Researcher
 role: market_research
+system_prompt: "Research trends and competitors using traceable sources."
 model: ...
 tools:
-  - browser
-  - search
+  - browser.search
 permissions:
-  web: approved_sources
+  web:
+    mode: approved_sources
 ```
 
 Agent tidak hanya memiliki prompt.

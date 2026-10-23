@@ -1,6 +1,7 @@
 package config
 
 import (
+	"os"
 	"strings"
 	"testing"
 )
@@ -18,6 +19,29 @@ func TestLoadExample(t *testing.T) {
 	}
 }
 
+func TestDocumentedWorkspaceExampleMatchesSchema(t *testing.T) {
+	doc, err := os.ReadFile("../../docs/07-dashboard-config-storage.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	marker := strings.Index(string(doc), "<!-- example:workspace.yaml -->")
+	if marker < 0 {
+		t.Fatal("workspace example marker is missing")
+	}
+	fence := strings.Index(string(doc)[marker:], "```yaml\n")
+	if fence < 0 {
+		t.Fatal("workspace YAML fence is missing")
+	}
+	start := marker + fence + len("```yaml\n")
+	relativeEnd := strings.Index(string(doc)[start:], "\n```")
+	if relativeEnd < 0 {
+		t.Fatal("workspace YAML fence is not closed")
+	}
+	if _, err := Parse(doc[start : start+relativeEnd]); err != nil {
+		t.Fatalf("documented workspace example is invalid: %v", err)
+	}
+}
+
 func TestParseAppliesFiniteDefaultsAndDenyByDefault(t *testing.T) {
 	cfg, err := Parse([]byte(`
 version: "1"
@@ -26,6 +50,7 @@ models:
 agents:
   content_reviewer:
     role: "Custom Reviewer"
+    system_prompt: "Review content against the supplied brief."
     model: "mock/default"
 `))
 	if err != nil {
@@ -34,7 +59,7 @@ agents:
 	if cfg.Budget.MaxModelCalls <= 0 || cfg.Budget.MaxTimeSeconds <= 0 || cfg.Budget.MaxCostUSD <= 0 {
 		t.Fatal("budget defaults must be finite and positive")
 	}
-	if got := cfg.Agents["content_reviewer"].Permission("filesystem"); got != "deny" {
+	if got := cfg.Agents["content_reviewer"].Permission("filesystem").Mode; got != "deny" {
 		t.Fatalf("unspecified permission = %q, want deny", got)
 	}
 	if cfg.Agents["content_reviewer"].Role != "Custom Reviewer" {
@@ -63,12 +88,33 @@ models:
 agents:
   editor:
     role: "Editor"
+    system_prompt: "Review content against the supplied brief."
     model: "mock/default"
     permisions:
       filesystem: read
 `))
 	if err == nil || !strings.Contains(err.Error(), "agents.editor.permisions") {
 		t.Fatalf("error = %v, want the unknown YAML field path", err)
+	}
+}
+
+func TestDuplicateAgentIDIsRejected(t *testing.T) {
+	_, err := Parse([]byte(`
+version: "1"
+models:
+  default: "mock/default"
+agents:
+  editor:
+    role: "Editor"
+    system_prompt: "Review the draft."
+    model: "mock/default"
+  editor:
+    role: "Second editor"
+    system_prompt: "Review another draft."
+    model: "mock/default"
+`))
+	if err == nil || !strings.Contains(err.Error(), "editor") {
+		t.Fatalf("error = %v, want duplicate agent ID rejection", err)
 	}
 }
 

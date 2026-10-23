@@ -188,45 +188,65 @@ budget:
 agents:
   ceo:
     role: "CEO"
+    system_prompt: "Set priorities, delegate work, and review cross-functional results."
     model: "strong-model"
     autonomy: 3
     permissions:
-      filesystem: read
+      filesystem:
+        mode: read
+        scope: workspace
 
   content_creator:
     role: "Content Creator"
+    system_prompt: "Draft content for the requested audience and channel using supported claims."
     model: "strong-model"
     autonomy: 2
     tools:
       - writer
-      - filesystem
+      - filesystem.write
 
   market_researcher:
     role: "Market Researcher"
+    system_prompt: "Research trends and competitors using traceable sources."
     model: "medium-model"
     autonomy: 2
     tools:
-      - browser
-      - search
+      - browser.search
 
   sales_analyst:
     role: "Sales Analyst"
+    system_prompt: "Analyze authorized sales data and state assumptions and limitations."
     model: "strong-model"
     autonomy: 2
     tools:
-      - spreadsheet
-      - filesystem
+      - spreadsheet.read
+      - filesystem.read
 
   editor:
     role: "Editor"
+    system_prompt: "Review drafts against the brief, evidence, audience, and policy."
     model: "medium-model"
     autonomy: 2
     permissions:
-      filesystem: read
+      filesystem:
+        mode: read
+        scope: workspace
 
 # Capability retry tepercaya (#21, I16)
 tool_capabilities:
   filesystem.read:
+    idempotent: true
+    operation_key_enforced: false
+  filesystem.write:
+    idempotent: false
+    operation_key_enforced: false
+  writer:
+    idempotent: false
+    operation_key_enforced: false
+  browser.search:
+    idempotent: true
+    operation_key_enforced: false
+  spreadsheet.read:
     idempotent: true
     operation_key_enforced: false
   external.mutate:
@@ -285,7 +305,7 @@ session_policy:
   enable_prompt_caching: true
 ```
 
-`workspace.yaml` divalidasi oleh loader config Go dengan strict field checking; field yang tidak dikenal ditolak. Budget yang dihilangkan memakai finite defaults dari Doc 02 §5A.2; batas ditetapkan lebih tinggi dari `0` dan enforcement dilakukan runtime. Permission yang tidak diberikan berarti `deny`.
+`workspace.yaml` divalidasi oleh loader config Go dengan strict field checking; field yang tidak dikenal ditolak. Setiap agent memiliki `system_prompt`, `role`, model yang terdaftar, serta referensi tools yang harus terdaftar di `tool_capabilities`. Budget yang dihilangkan memakai finite defaults dari Doc 02 §5A.2; batas ditetapkan lebih tinggi dari `0` dan enforcement dilakukan runtime. Permission yang tidak diberikan berarti `deny`.
 
 `providers.<id>.credentials` hanya berisi referensi environment dengan bentuk `$ENV_VAR`; literal secret ditolak. Credential di-resolve dari environment saat adapter memintanya dan nilai secret tidak disalin kembali ke konfigurasi. `providers.<id>.options` menampung opsi spesifik adapter dalam namespace provider tersebut. Ini mengikuti isolasi key dan accounting di [§32.1](06-permissions-approvals-roles.md#321-provider-usage-accounting-openrouter). `models` memakai pemetaan alias ke model ID di [5A.8 — Model Router](02-ai-control-plane.md#5a8-model-router). `tool_capabilities` adalah konfigurasi retry tepercaya di [§21](05-artifacts-memory-tools.md#21-tools), bukan klaim dari agen.
 

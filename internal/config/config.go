@@ -16,6 +16,7 @@ import (
 
 var (
 	identifierPattern   = regexp.MustCompile(`^[a-z][a-z0-9_-]{1,31}$`)
+	capabilityPattern   = regexp.MustCompile(`^[a-z][a-z0-9_-]*(\.[a-z][a-z0-9_-]*)*$`)
 	envReferencePattern = regexp.MustCompile(`^\$([A-Z_][A-Z0-9_]*)$`)
 )
 
@@ -58,12 +59,21 @@ type ProviderConfig struct {
 }
 
 type AgentConfig struct {
-	Role        string            `yaml:"role"`
-	Model       string            `yaml:"model"`
-	Provider    string            `yaml:"provider,omitempty"`
-	Autonomy    int               `yaml:"autonomy"`
-	Tools       []string          `yaml:"tools"`
-	Permissions map[string]string `yaml:"permissions"`
+	Role         string                      `yaml:"role"`
+	SystemPrompt string                      `yaml:"system_prompt"`
+	Model        string                      `yaml:"model"`
+	Provider     string                      `yaml:"provider,omitempty"`
+	Autonomy     int                         `yaml:"autonomy"`
+	Tools        []string                    `yaml:"tools"`
+	Permissions  map[string]PermissionConfig `yaml:"permissions"`
+}
+
+// PermissionConfig describes one extensible permission domain. The policy
+// engine interprets mode/scope for each registered capability at runtime.
+type PermissionConfig struct {
+	Mode    string   `yaml:"mode"`
+	Scope   string   `yaml:"scope,omitempty"`
+	Allowed []string `yaml:"allowed,omitempty"`
 }
 
 type BudgetConfig struct {
@@ -337,6 +347,11 @@ func (c Config) Validate() error {
 			return fieldError("models."+key, "must not be empty")
 		}
 	}
+	for _, capability := range sortedKeys(c.ToolCapabilities) {
+		if !capabilityPattern.MatchString(capability) {
+			return fieldError("tool_capabilities."+capability, "capability ID must be a lowercase dotted name")
+		}
+	}
 	for _, id := range sortedKeys(c.Providers) {
 		if !identifierPattern.MatchString(id) {
 			return fieldError("providers."+id, "provider ID must be a lowercase slug")
@@ -359,6 +374,9 @@ func (c Config) Validate() error {
 		if strings.TrimSpace(agent.Role) == "" {
 			return fieldError("agents."+id+".role", "is required")
 		}
+		if strings.TrimSpace(agent.SystemPrompt) == "" {
+			return fieldError("agents."+id+".system_prompt", "is required")
+		}
 		if strings.TrimSpace(agent.Model) == "" || !containsValue(c.Models, agent.Model) {
 			return fieldError("agents."+id+".model", "must reference a model listed in models")
 		}
@@ -368,6 +386,32 @@ func (c Config) Validate() error {
 		if agent.Provider != "" {
 			if _, exists := c.Providers[agent.Provider]; !exists {
 				return fieldError("agents."+id+".provider", "must reference a configured provider")
+			}
+		}
+		seenTools := make(map[string]struct{}, len(agent.Tools))
+		for i, tool := range agent.Tools {
+			path := fmt.Sprintf("agents.%s.tools[%d]", id, i)
+			if _, exists := c.ToolCapabilities[tool]; !exists {
+				return fieldError(path, "references an unknown tool capability")
+			}
+			if _, exists := seenTools[tool]; exists {
+				return fieldError(path, "duplicates a tool capability")
+			}
+			seenTools[tool] = struct{}{}
+		}
+		for _, capability := range sortedKeys(agent.Permissions) {
+			permission := agent.Permissions[capability]
+			path := "agents." + id + ".permissions." + capability
+			if strings.TrimSpace(capability) == "" || strings.TrimSpace(permission.Mode) == "" {
+				return fieldError(path, "capability and mode are required")
+			}
+			if permission.Mode == "allowlist" && len(permission.Allowed) == 0 {
+				return fieldError(path+".allowed", "must list at least one item for allowlist mode")
+			}
+			for i, allowed := range permission.Allowed {
+				if strings.TrimSpace(allowed) == "" {
+					return fieldError(fmt.Sprintf("%s.allowed[%d]", path, i), "must not be empty")
+				}
 			}
 		}
 	}
@@ -392,11 +436,11 @@ func (c Config) Validate() error {
 
 // Permission returns the configured permission for a capability. Missing
 // entries always deny access.
-func (a AgentConfig) Permission(capability string) string {
-	if permission := a.Permissions[capability]; permission != "" {
+func (a AgentConfig) Permission(capability string) PermissionConfig {
+	if permission, ok := a.Permissions[capability]; ok && permission.Mode != "" {
 		return permission
 	}
-	return "deny"
+	return PermissionConfig{Mode: "deny"}
 }
 
 // Credential resolves one provider credential reference without storing the

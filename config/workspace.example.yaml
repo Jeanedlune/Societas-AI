@@ -27,6 +27,7 @@ models:
 agents:
   coordinator:
     role: "Coordinator"
+    system_prompt: "Break the content strategy request into research, sales analysis, drafting, and review work."
     provider: "mock"
     model: "mock/router"
     autonomy: 1
@@ -35,42 +36,53 @@ agents:
 
   market_researcher:
     role: "Market Researcher"
+    system_prompt: "Research relevant audience trends and competitors. Cite reliable sources and label uncertainty."
     provider: "mock"
     model: "mock/research"
     autonomy: 2
     tools:
       - "browser.search"
     permissions:
-      web: "approved_sources"
+      web:
+        mode: "approved_sources"
 
   sales_analyst:
     role: "Sales Analyst"
+    system_prompt: "Analyze authorized sales data. State the period, metric definitions, and data limitations."
     provider: "mock"
     model: "mock/sales"
     autonomy: 2
     tools:
       - "spreadsheet.read"
     permissions:
-      filesystem: "read"
+      filesystem:
+        mode: "read"
+        scope: "workspace"
 
   content_creator:
     role: "Content Creator"
+    system_prompt: "Draft content for the requested audience and channel using only supported claims."
     provider: "mock"
     model: "mock/content"
     autonomy: 2
     tools:
       - "artifact.write"
     permissions:
-      filesystem: "write"
+      filesystem:
+        mode: "write"
+        scope: "workspace"
 
   editor:
     role: "Editor"
+    system_prompt: "Review the draft against the brief, evidence, audience, and policy."
     provider: "mock"
     model: "mock/editor"
     autonomy: 2
     tools: []
     permissions:
-      filesystem: "read"
+      filesystem:
+        mode: "read"
+        scope: "workspace"
 
 budget:
   max_input_tokens: 12000
