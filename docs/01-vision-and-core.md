@@ -2,7 +2,7 @@
      Bagian dari societas-full-product-spec. Urutan dokumen diatur di README.md.
      Nomor section dipertahankan; referensi silang antar-doc memakai nomor section (#N, 5A.x, 72A.x). -->
 
-# Societas — Full Product Specification
+# Societas — General-Purpose Multi-Agent Workspace
 
 > **Status:** Konsep / Product Blueprint  
 > **Bahasa:** Indonesia  
@@ -17,14 +17,10 @@
 `societas` adalah sebuah **Societas / Multi-Agent Workspace** yang memungkinkan satu orang membangun dan menjalankan tim AI virtual dengan berbagai peran seperti:
 
 - CEO
-- CTO
-- Researcher
-- Engineer
-- Reviewer
-- Product
-- Designer
-- Security
-- Analyst
+- Content Creator
+- Market Researcher
+- Sales Analyst
+- Editor / Reviewer
 - dan role custom lainnya
 
 Pengguna menjadi manusia yang memegang keputusan akhir.
@@ -75,23 +71,17 @@ Konsep utamanya:
                   / FOUNDER
                       |
                       v
-                    CEO
+                    COORDINATOR
                       |
        +--------------+--------------+
        |              |              |
        v              v              v
-     CTO           Research          CPO
-       |              |              |
-       v              v              v
-    Engineer       Analyst          Designer
-       |              |
-       +-------+------+ 
+         Content Creator  Market Research  Sales Analyst
+             |              |              |
+             +--------------+--------------+
                |
                v
-            Reviewer
-               |
-               v
-            Artifact
+                 Editor
                |
                v
              HUMAN
@@ -110,10 +100,10 @@ Core system harus dapat dijalankan sendiri.
 Target utama:
 
 ```text
-git clone
+install
     |
     v
-build
+configure
     |
     v
 run locally
@@ -263,17 +253,15 @@ workspace/
 Agent adalah entitas AI yang memiliki:
 
 ```yaml
-id: cto
-name: CTO
-role: technical_lead
+id: market_researcher
+name: Market Researcher
+role: market_research
 model: ...
 tools:
-  - filesystem
-  - shell
-  - git
+  - browser
+  - search
 permissions:
-  filesystem: workspace
-  shell: restricted
+  web: approved_sources
 ```
 
 Agent tidak hanya memiliki prompt.
@@ -306,66 +294,54 @@ Fokus:
 - trade-off
 - review hasil lintas fungsi
 
-### CTO
+### Market Researcher
 
 Fokus:
 
-- architecture
-- technical feasibility
-- performance
-- security
-- engineering direction
-
-### Researcher
-
-Fokus:
-
-- mencari informasi
-- verifikasi
-- analisis
+- memetakan pasar dan kompetitor
+- mencari serta memverifikasi sumber
+- membedakan fakta, inferensi, dan hal yang belum diketahui
 - membuat research report
 
-### Engineer
+### Content Creator
 
 Fokus:
 
-- implementation
-- testing
-- debugging
-- refactoring
+- menyusun ide, naskah, dan materi publikasi
+- menyesuaikan format dengan kanal dan audiens
+- menjaga klaim tetap sesuai sumber yang tersedia
 
-### Reviewer
+### Sales Analyst
 
 Fokus:
 
-- mencari bug
-- menemukan risk
-- mengevaluasi kualitas
-- memberikan feedback
+- membaca data penjualan yang diizinkan
+- menganalisis tren, segmentasi, dan kinerja produk
+- menyertakan asumsi serta keterbatasan data
 
 Role tidak harus fixed.
 
 User dapat membuat:
 
 ```text
-CEO
-CTO
-Researcher
+Coordinator
+Content Creator
+Market Researcher
+Sales Analyst
+Editor
 Lawyer
-Marketing
-Finance
+Finance Analyst
 Game Designer
-Security Engineer
-DevOps
 Data Scientist
+dan role custom lainnya
 ```
 
 Komposisi squad bebas per workspace dan mengikuti domain proyek, misalnya:
 
 ```text
-Tim teknis     : lead, developer, qa_engineer, security_auditor
-Tim riset      : analyst, researcher, fact_checker
-Tim operasional: ops_lead, support_agent, finance_checker
+Tim konten     : content_creator, editor, fact_checker
+Tim riset      : market_researcher, competitor_analyst, fact_checker
+Tim penjualan  : sales_analyst, product_analyst, finance_reviewer
 ```
 
 Semua peran, batasan izin tools, tier model, dan system prompt didefinisikan deklaratif di YAML.

@@ -94,7 +94,7 @@ def documentation_checks(texts: dict[str, str], mapping: dict[str, str], check: 
             if not (target.startswith("#") or re.match(r"(?:\./)?[^:#]+\.md(?:#|$)", target)):
                 continue
             destination, _, anchor = target.partition("#")
-            destination = destination.removeprefix("./") or filename
+            destination = Path(destination.removeprefix("./") or filename).name
             location = f"{filename}:{prose[:match.start()].count(chr(10)) + 1}"
             check(f"document_link:{location}:{target}", destination in texts, target)
             if destination not in texts or not anchor:
@@ -418,14 +418,22 @@ def audit(root: Path, baseline_ref: str | None) -> dict[str, Any]:
     def check(name: str, passed: bool, detail: Any = "") -> None:
         checks.append({"name": name, "passed": passed, "detail": detail})
 
-    texts = {path.name: path.read_text(encoding="utf-8") for path in root.glob("*.md")}
-    canonical = texts.get("10-contracts-mvp-roadmap.md", "")
-    check("canonical_document_present", bool(canonical))
+    active_paths = list(root.glob("*.md")) + list((root / "docs").rglob("*.md"))
+    archive_link = root / "archive" / "git-engineering-workflows.md"
+    if archive_link.exists():
+        active_paths.append(archive_link)
+    texts = {path.name: path.read_text(encoding="utf-8") for path in active_paths}
+    active_contract = texts.get("10-contracts-mvp-roadmap.md", "")
+    legacy_path = root / "archive" / "10-contracts-legacy.md"
+    canonical = legacy_path.read_text(encoding="utf-8") if legacy_path.exists() else active_contract
+    check("canonical_document_present", bool(active_contract))
     schemas: dict[str, dict[str, Any]] = {}
     examples: list[tuple[str, dict[str, Any]]] = []
     fixtures: dict[str, dict[str, Any]] = {}
     counts: Counter = Counter()
-    for filename, text in sorted(texts.items()):
+    contract_texts = dict(texts)
+    contract_texts["10-contracts-mvp-roadmap.md"] = canonical
+    for filename, text in sorted(contract_texts.items()):
         for match in FENCE.finditer(text):
             language, body = match.groups()
             counts[language] += 1
@@ -581,9 +589,14 @@ def audit(root: Path, baseline_ref: str | None) -> dict[str, Any]:
             if not re.match(r"^\d\d-", filename):
                 continue
             previous = subprocess.run(
-                ["git", "show", f"{baseline_ref}:{filename}"], cwd=root,
+                ["git", "show", f"{baseline_ref}:docs/{filename}"], cwd=root,
                 text=True, capture_output=True, check=False,
             )
+            if previous.returncode:
+                previous = subprocess.run(
+                    ["git", "show", f"{baseline_ref}:{filename}"], cwd=root,
+                    text=True, capture_output=True, check=False,
+                )
             if previous.returncode:
                 check(f"numbering_baseline:{filename}", False, previous.stderr.strip())
                 continue

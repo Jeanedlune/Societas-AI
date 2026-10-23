@@ -19,14 +19,7 @@ permissions:
   shell:
     mode: allowlist
     allowed:
-      - go
-      - git
-      - npm
-      - cargo
-      - make
-
-  git:
-    mode: read_write
+      - python
 
   network:
     mode: allowed
@@ -34,7 +27,7 @@ permissions:
 
 ## 22.2 Path Jailing
 
-Eksekusi proses dikunci ke `Current Working Directory` (`./workspace` atau worktree task, #60.1). Adapter binary/subcommand membedakan path, pola paket, identifier, dan nilai flag. Untuk argumen path, Policy Engine menolak:
+Eksekusi proses opsional dikunci ke `Current Working Directory` di dalam workspace yang terisolasi. Adapter tool membedakan path, identifier, dan nilai flag. Untuk argumen path, Policy Engine menolak:
 
 - path traversal yang setelah normalisasi/resolusi keluar jail
 - direktori absolut (`/`, `/etc`, ...)
@@ -57,9 +50,9 @@ Tool berisiko tinggi harus dapat meminta approval. Menunggu approval bersifat **
 Contoh:
 
 ```text
-Engineer wants to execute:
+Agent requests an external action:
 
-rm -rf ./build
+publish the approved content to a public channel
 
 Approval required.
 ```
@@ -79,8 +72,8 @@ Kontrak wire mengikuti 72A.8/I17: request menunjuk snapshot artifact ID/versi/ch
 
 Approval bersifat risk-aware. Evaluasi risiko dilakukan **dinamis** lewat konfigurasi `workspace.yaml` (lihat #36), berdasarkan:
 
-- `path_patterns`: mis. `migrations/**`, `src/auth/**`, `infra/**`, `contracts/**`
-- `intent_keywords`: mis. `drop database`, `secret`, `deploy`, `payout`
+- `path_patterns`: mis. `customer-data/**`, `finance/**`, `published/**`, `credentials/**`
+- `intent_keywords`: mis. `publish publicly`, `send campaign`, `delete customer data`, `transfer funds`
 
 Task `risk_tier: critical` **dikunci**: semua eksekusi mutasi wajib `delivery_mode: immediate` dan human approval sebelum dijalankan, terlepas dari autonomy level agen (lihat #24, 5A.8). Aksi `risk_tier: high` yang memerlukan approval masuk `delivery_mode: digest` dan tidak boleh dieksekusi sebelum grant tervalidasi.
 
@@ -92,8 +85,8 @@ Mode delivery mengikuti klasifikasi akhir setelah runtime escalation: setiap ken
 
 Human attention adalah resource terbatas, bukan budget token. Risk mengatur urgensi notifikasi, bukan kekuatan approval binding atau izin tool.
 
-- **Critical → immediate / Synchronous Halt.** Drop table, force push, breaking consensus, dan transfer funds menghentikan mutasi serta dependency yang terdampak sebelum side effect; kirim notifikasi segera dan wajib keputusan individual. Tidak masuk digest atau **Approve All**. Worker task tetap dilepas; task independen/workspace lain tidak otomatis dihentikan.
-- **High → digest bila mode aktif.** Mutasi rute API/dependensi, cleanup cache, atau shell terisolasi hanya contoh klasifikasi policy, bukan izin otomatis. Request diparkir dan dihimpun menurut interval/akhir siklus (#33.7/#36). Path critical mengalahkan high; command di luar allowlist tetap deny.
+- **Critical → immediate / Synchronous Halt.** Menghapus data pelanggan, publikasi eksternal, atau transfer dana menghentikan aksi sebelum side effect; kirim notifikasi segera dan wajib keputusan individual. Tidak masuk digest atau **Approve All**. Worker task tetap dilepas; task independen/workspace lain tidak otomatis dihentikan.
+- **High → digest bila mode aktif.** Mengirim campaign, mengubah pricing, atau mengekspor data penjualan hanya contoh klasifikasi policy, bukan izin otomatis. Request diparkir dan dihimpun menurut interval/akhir siklus (#33.7/#36). Path critical mengalahkan high; command di luar allowlist tetap deny.
 
 `awaiting_approval (batch)` adalah label UI untuk `status: awaiting_approval` + request `delivery_mode: digest`, **bukan enum task baru**. SQLite menyimpan checkpoint, snapshot/request, expiry, dan relasi manifest. Worker/goroutine/working set task dilepas saat menunggu (#40.1); agen boleh mengambil backlog independen yang lolos dependency, permission, budget, dan concurrency guard.
 
@@ -150,26 +143,14 @@ CEO sebaiknya menjadi **coordinator**, bukan superuser.
 
 ---
 
-# 26. CTO Agent
+# 26. Specialist Agents
 
-CTO bertanggung jawab terhadap:
+Specialist agent menerima role sesuai domain tugas. Contoh:
 
-- architecture
-- technical feasibility
-- performance
-- reliability
-- security
-- engineering standards
-
-CTO dapat melakukan:
-
-```text
-design
-review
-benchmark
-architecture decision
-risk analysis
-```
+- Content Creator menyusun draft, naskah, dan materi kanal.
+- Market Researcher memetakan pasar, kompetitor, serta sumber evidence.
+- Sales Analyst menganalisis data penjualan sesuai permission.
+- Editor memeriksa kualitas, konsistensi, dan dukungan sumber.
 
 ---
 
@@ -202,37 +183,27 @@ unknown
 
 ---
 
-# 28. Engineer Agent
+# 28. Task Executor Agent
 
-Engineer dapat:
+Task executor dapat:
 
-- membaca repo
-- membuat code
-- menjalankan test
-- melakukan benchmark
-- membuat patch
-- membuka artifact patch
+- menerima task dengan goal dan batasan eksplisit
+- menggunakan tool yang diizinkan untuk domain task
+- menghasilkan artifact seperti draft, tabel, ringkasan, atau report
+- mencatat sumber, asumsi, dan keterbatasan analisis
 
-Engineer tidak otomatis boleh melakukan deployment production.
-
-Output kode Engineer selalu melewati **Deterministic Toolchain Runner** (pipeline build/lint/test lokal, 0 token, fail-fast) sebelum diserahkan ke Reviewer (lihat [5A.22 — Compiler Gate](02-ai-control-plane.md#compiler-gate-sebelum-reviewer-dipanggil), #29, `toolchain` di #36).
-
-Mekanisme penulisan kode ke worktree memakai **Search & Replace Block** (#60.3) — Engineer tidak menulis ulang seluruh file dan tidak mengarang header unified diff. Serial Merge Queue (#60.4) melakukan rebase/resolve → freeze candidate → deterministic gate → Semantic Rebase → Reviewer → approval. Snapshot mengikat commit/tree/base, gate/semantic/review evidence dan recipe; perubahan input membatalkan approval/evidence (I17/I19, 72A.8/72A.10). Textual conflict kembali ke Engineer; semantic conflict/inconclusive diparkir untuk `escalation_lead` (#48.5) dan refactor asinkron, bukan langsung merge.
-
-Untuk integrasi kontrak/API, Engineer mengikuti alur **Contract-First** (#17.1): codegen binding otomatis + `contract.lookup`, bukan menulis call manual.
+Tidak ada task yang otomatis boleh melakukan tindakan eksternal seperti mempublikasikan konten, mengirim pesan, atau mengubah sistem bisnis. Tindakan tersebut mengikuti permission dan approval yang berlaku.
 
 ---
 
 # 29. Reviewer Agent
 
-Reviewer fokus pada:
+Reviewer fokus pada kualitas artifact untuk semua domain:
 
-- bug
-- security
-- performance regression
-- code quality
-- architecture violation
-- missing tests
+- kesesuaian dengan tujuan dan batasan
+- akurasi klaim dan dukungan sumber
+- kelengkapan analisis serta asumsi
+- konsistensi dan risiko sebelum tindakan eksternal
 
 Output:
 
@@ -251,7 +222,7 @@ BLOCKED
 
 Label tampilan yang ekuivalen dipetakan ke wire `review.completed.verdict` (72A.8): `PASS` → `approve`, `PASS_WITH_WARNINGS` → `approve` dengan temuan advisory nonblocking, `REQUEST_CHANGES` → `request_changes`. `reject` adalah penolakan final hasil review, bukan state task `blocked`. Label legacy `BLOCKED` dipetakan secara deterministik oleh Adapter berdasarkan kategori alasan (Keputusan I01): fatal technical violation → `reject`; external dependency/policy wait → transisi state task `blocked`/`awaiting_approval`. Adapter wajib menghasilkan verdict kanonik yang eksplisit sebelum hasil review diproses.
 
-Reviewer LLM **hanya dipanggil setelah Local Compiler Gate lolos** ([5A.22 — Compiler Gate](02-ai-control-plane.md#compiler-gate-sebelum-reviewer-dipanggil)): backend Go menjalankan build/linter lokal terlebih dahulu dengan biaya 0 token; kegagalan sintaks dikembalikan langsung ke Engineer tanpa memanggil Reviewer.
+Reviewer dipanggil sesuai kebutuhan task dan dapat memeriksa evidence maupun artifact sebelum hasil diserahkan kepada pengguna.
 
 ---
 
@@ -281,7 +252,7 @@ Tidak ada batas role fixed.
 ## 30.1 Declarative Squad Composition
 
 - Backend Go agnostik terhadap hierarki & peran — tidak ada enum peran yang dikompilasi; Go membaca `agents:` di `workspace.yaml` sebagai `map[string]AgentConfig` saat runtime.
-- Routing & eskalasi berbasis konfigurasi: Jev AI / Model Router hanya boleh merutekan tugas ke **ID agen yang aktif terdaftar** pada konfigurasi workspace terkait; merutekan ke ID tidak dikenal ditolak deterministik.
+- Routing & eskalasi berbasis konfigurasi mengikuti [5A.8 — Model Router](02-ai-control-plane.md#5a8-model-router): Jev AI hanya boleh merutekan tugas ke **ID agen yang aktif terdaftar** pada konfigurasi workspace terkait; merutekan ke ID tidak dikenal ditolak deterministik.
 - **Dynamic Enum Injection:** schema delegasi yang disiapkan runtime untuk tiap agen mengunci `requested_assignee` ke `enum` dinamis (ID agen aktif + `null`) dan memanfaatkan constrained decoding — LLM tidak bisa mengarang nama agen, loop penolakan karena salah sebut tereliminasi (5A.8).
 - Pengambil keputusan akhir (arbitrase debat, #48) ditentukan via field konfigurasi `escalation_lead` — mis. `escalation_lead: "tech_lead"`, atau `escalation_lead: "human"` untuk diserahkan ke dashboard pengguna.
 
@@ -301,7 +272,7 @@ agents:
   research:
     provider: anthropic
 
-  coder:
+  sales_analyst:
     provider: local
 
   reviewer:

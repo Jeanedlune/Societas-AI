@@ -12,7 +12,7 @@ Contoh:
 {
   "type": "message.sent",
   "from": "ceo",
-  "to": "cto",
+  "to": "market_researcher",
   "task_id": "TASK-101",
   "content": "Review architecture option B."
 }
@@ -105,9 +105,9 @@ Contoh channel per agent:
 
 ```text
 agent/ceo
-agent/cto
+agent/market_researcher
 agent/research
-agent/engineer
+agent/content_creator
 agent/reviewer
 ```
 
@@ -115,7 +115,7 @@ Atau berdasarkan workspace:
 
 ```text
 workspace/tunly/ceo
-workspace/tunly/cto
+workspace/tunly/market_researcher
 workspace/tunly/research
 ```
 
@@ -131,9 +131,9 @@ Event Bus
   +---- Broadcast: workspace/tunly
            |
            +---- Channel: agent/ceo
-           +---- Channel: agent/cto
+           +---- Channel: agent/market_researcher
            +---- Channel: agent/research
-           +---- Channel: agent/coder
+           +---- Channel: agent/content_creator
 ```
 
 Message/event dikirim sebagai envelope (lihat Section 72A.3).
@@ -252,28 +252,28 @@ Contoh:
 CEO:
 Research this technology.
 
-Research:
-I found 8 relevant projects.
+Market Researcher:
+I found 8 relevant competitors and verified the sources.
 
-CEO:
-Give me the top 3.
+Coordinator:
+Summarize the top 3 opportunities.
 
-Research:
+Market Researcher:
 1. ...
 2. ...
 3. ...
 
-CEO:
-CTO, evaluate #2.
+Coordinator:
+Sales Analyst, compare the sales trend for option #2.
 
-CTO:
-Architecture is viable but has two risks.
+Sales Analyst:
+Sales volume is rising, but the comparison period is incomplete.
 
-CEO:
-Coder, prototype the core transport.
+Coordinator:
+Content Creator, draft a post for the target audience.
 
-Coder:
-Starting implementation.
+Content Creator:
+Drafting with the approved brand voice and sources.
 ```
 
 Semua event direkam.

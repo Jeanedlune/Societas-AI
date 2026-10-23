@@ -92,7 +92,7 @@ Budget harus enforced oleh runtime.
 
 Agent tidak boleh menaikkan budget dirinya sendiri.
 
-`max_rebuttals` membatasi putaran sanggahan per task dan merupakan field Budget kanonik (72A.5). Counter disimpan di SQLite, tidak reset saat retry/restart. Saat limit tercapai tanpa kesepakatan, Orchestrator membekukan task dan dieskalasi ke `escalation_lead` (konfigurasi #36, contoh: CTO) untuk `decision.md` (lihat #48).
+`max_rebuttals` membatasi putaran sanggahan per task dan merupakan field Budget kanonik (72A.5). Counter disimpan di SQLite, tidak reset saat retry/restart. Saat limit tercapai tanpa kesepakatan, Orchestrator membekukan task dan dieskalasi ke `escalation_lead` (konfigurasi #36, contoh: editor atau analis senior) untuk `decision.md` (lihat #48).
 
 **Reservation lease/TTL:** setiap `budget.reserved` membawa lease dengan TTL. Jika sistem mati sebelum `budget.settled`, sisa reservasi otomatis **expired** dan di-reconcile saat startup — mencegah orphan reservation yang menahan budget selamanya.
 
@@ -130,10 +130,10 @@ $5.00
       +-- Research
       |   $0.20
       |
-      +-- CTO
+      +-- Market Researcher
       |   $0.25
       |
-      +-- Engineer
+      +-- Content Creator
       |   $0.40
       |
       +-- Reviewer
@@ -206,7 +206,7 @@ Aturan mode, lifecycle sesi, dan flush hanya didefinisikan di [I23 — Session P
 ```text
 1. System Prompt & Role (statis per agent) → cache hit rate tinggi
 2. Tool Schemas (statis per workspace) → cache hit rate tinggi
-3. PROJECT_MAP.md (statis per workspace) → cache hit rate tinggi
+3. Workspace Brief (statis per workspace) → cache hit rate tinggi
 4. Recent History (dinamis per turn) → cache hit rate rendah
 5. Input Baru (dinamis per turn) → cache miss (selalu direfresh)
 ```
@@ -336,12 +336,13 @@ Jev (cheap)
 LLM medium
 ├── research synthesis
 ├── review
+├── content drafting
 └── planning
 
 LLM strong
 ├── CEO decisions
-├── difficult architecture
-└── complex coding
+├── complex analysis
+└── high-impact recommendations
 ```
 
 Contoh konfigurasi:
@@ -352,8 +353,9 @@ models:
   policy: jev-latest        # Jev AI untuk tool call evaluation
   summarizer: cheap-model
   research: medium-model
-  cto: strong-model
-  engineer: strong-model
+  content_creator: strong-model
+  market_researcher: medium-model
+  sales_analyst: strong-model
   reviewer: medium-model
   ceo: strong-model
 ```
@@ -481,7 +483,7 @@ Jangan menggunakan unlimited retry.
 
 Untuk tool, timeout/network error tidak membuktikan side effect belum terjadi. Orchestrator memeriksa `outcome` dan capability tepercaya (#21) sebelum retry: `outcome_unknown` hanya aman untuk retry otomatis bila idempotent atau provider menegakkan `operation_key` stabil sejak dispatch pertama. Tanpa itu, wajib rekonsiliasi/keputusan human (72A.1 I16, 72A.8–10), walaupun retry budget masih tersedia.
 
-**Batas koreksi lokal (Compiler Gate):** kegagalan build/lint pada Deterministic Toolchain Runner ([5A.22 — Compiler Gate](02-ai-control-plane.md#compiler-gate-sebelum-reviewer-dipanggil)) dibatasi maksimal **3 kali iterasi perbaikan**. Jika setelah 3 kali percobaan berturut-turut masih gagal/timeout (termasuk log inactivity timeout), Orchestrator membekukan task (`status: blocked`) dan mengeskalasikannya ke `escalation_lead` atau manusia.
+**Batas koreksi lokal:** retry koreksi output dibatasi sesuai retry budget dan kategori error (I10/I16). Jika task tidak dapat dilanjutkan, Orchestrator membekukannya (`status: blocked`) dan mengeskalasikannya ke `escalation_lead` atau manusia.
 
 ## 5A.14 Fan-Out Limit
 
@@ -500,7 +502,7 @@ Contoh yang baik:
 CEO
  |
  +-- Research
- +-- CTO
+ +-- Market Researcher
  +-- Security
  +-- CPO
 ```
@@ -695,31 +697,22 @@ Summary
 
 Untuk pekerjaan rutin.
 
-### Compiler Gate (Sebelum Reviewer Dipanggil)
+### Domain Validation (Sebelum Review)
 
-Reviewer LLM mahal tidak boleh dipanggil sebelum kode lolos kompilasi lokal — **Deterministic Toolchain Runner** di backend Go (Go Daemon) menjalankannya terlebih dahulu:
+Artifact dapat melewati validator deterministik yang sesuai dengan domain sebelum review, misalnya pemeriksaan schema, format data, sumber wajib, atau batas publikasi. Validator bersifat opsional dan tidak mengasumsikan repository, compiler, atau bahasa pemrograman tertentu:
 
 ```text
-Engineer output
+Agent output
       ↓
-Toolchain pipeline (Go Daemon, 0 token)
+Configured validator (0 token)
       ↓
-   error?  ---- ya ----> JSON error ringkas (<500 char) ke Engineer
+   error?  ---- ya ----> structured findings ke task owner
       | tidak
       ↓
-Reviewer LLM (logika bisnis, arsitektur, keamanan)
+Reviewer (goal, evidence, quality, policy)
 ```
 
-Aturan runner:
-
-- **0 TOKEN parsing:** LLM tidak dipakai untuk memformat error compiler. Go Daemon memparsing log murni di kode, memanfaatkan native JSON output toolchain:
-  - Rust: `cargo check --message-format=json`, `cargo clippy --message-format=json`
-  - Node/TS: `eslint --format json`, `tsc` parser
-  - Go: `golangci-lint run --out-format json`
-- Go menyaring span penting (file, baris, error message) dan hanya mengirim **JSON ringkas <500 karakter** ke Engineer Agent.
-- **Fail-Fast:** pipeline berhenti seketika di step pertama yang gagal (misal gagal `fmt`/`check` → `test` tidak dijalankan). Pipeline dideklarasikan di `workspace.yaml` (`toolchain`, #36).
-- **Log Inactivity Timeout (5 menit):** Tolak batas waktu durasi total (*hard execution timeout*) karena performa kompilasi bervariasi drastis tergantung hardware (misal CPU 2 core vs 16 core pada build Rust/C++). Go Tool Runtime memantau stream output `stdout`/`stderr`. Selama compiler/test (`cargo`, `go test`, `npm`) masih memproduksi log baru, proses dibiarkan berjalan. Jika output terminal hening/macet total tanpa log baru selama **5 menit**, proses dianggap mengalami *deadlock* / *infinite loop*. Tool Runtime Go langsung mengirim sinyal `SIGTERM`/`SIGKILL` dan mengembalikan error `TOOL_TIMEOUT`.
-- **Loop budget & eskalasi:** bolak-balik perbaikan lokal dibatasi **maksimal 3 iterasi** — setelah itu Orchestrator membekukan task (`status: blocked`) dan mengeskalasikannya ke `escalation_lead` atau manusia (lihat 5A.13 retry budget). Konteks error wajib di-truncate agar tidak terjadi akumulasi token kuadratik antar-iterasi.
+Validator memakai konfigurasi dan input yang disetujui, menghasilkan findings terstruktur, serta mematuhi retry budget dan sandbox policy. Task tanpa validator tetap mengikuti review yang ditentukan workspace.
 
 ### Expensive Path
 
@@ -741,7 +734,7 @@ Orchestrator memilih jalur berdasarkan task.
 
 User:
 
-> "CEO, evaluasi apakah kita perlu menambahkan fitur baru."
+> "Bantu siapkan strategi konten berdasarkan tren pasar dan performa penjualan bulan ini."
 
 Flow:
 
@@ -749,26 +742,24 @@ Flow:
 YOU
  |
  v
-CEO
+Coordinator
  |
- +----> Research
+ +----> Market Researcher
  |          |
- |          +--> research.md
+ |          +--> market-research.md
  |          +--> 800 token summary
  |
- +----> CTO
+ +----> Sales Analyst
  |          |
- |          +--> architecture.md
+ |          +--> sales-analysis.csv
  |          +--> 1000 token summary
  |
- v
-CEO synthesis
- |
- v
-Engineer only if necessary
- |
- v
-Reviewer only if necessary
+ +----> Content Creator
+            |
+            +--> content-draft.md
+            |
+            v
+          Editor
  |
  v
 YOU
@@ -799,17 +790,17 @@ Contoh:
 
 ```text
 Current task:
-"Compare gRPC and REST for agent communication."
+"Find content opportunities for the target audience this quarter."
 
 Retrieve:
-- gRPC benchmark
-- previous architecture decision
-- REST implementation
-- relevant research
+- audience profile and approved brand voice
+- current market research
+- recent sales trends
+- relevant campaign results
 
 Ignore:
-- unrelated finance notes
-- old UI discussion
+- unrelated customer records
+- expired promotions
 - unrelated agent conversations
 ```
 
@@ -831,10 +822,10 @@ Estimated    $4.12
 
 By Agent
 CEO          $0.72
-CTO          $1.10
-Research     $0.68
-Engineer     $1.32
-Reviewer     $0.30
+Content      $1.10
+Market       $0.68
+Sales        $1.32
+Editor       $0.30
 ```
 
 User dapat melihat agent mana yang paling mahal.

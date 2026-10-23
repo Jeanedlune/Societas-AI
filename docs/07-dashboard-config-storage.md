@@ -11,11 +11,11 @@ Dashboard adalah interface utama untuk melihat organisasi.
 ```text
 SOCIETAS
 
-CEO        ● Working
-CTO        ● Working
-Research   ● Searching
-Engineer   ● Coding
-Reviewer   ○ Idle
+Coordinator       ● Working
+Content Creator   ● Drafting
+Market Research   ● Searching
+Sales Analyst     ● Analyzing
+Editor            ○ Idle
 ```
 
 ---
@@ -75,13 +75,11 @@ Pause memakai `task.paused` `phase: requested` (human → Orchestrator); sesudah
 Menampilkan hubungan:
 
 ```text
-          CEO
-       /   |   \
-     CTO  CPO  Research
-      |          |
-    Coder       Analyst
-      |
-   Reviewer
+              Coordinator
+          /       |       \
+ Content Creator Research Sales Analyst
+          \       |       /
+                Editor
 ```
 
 ---
@@ -99,10 +97,10 @@ Research agent communication patterns
 12:01:08 Research -> CEO
 Found 7 relevant implementations
 
-12:01:09 CEO -> CTO
-Evaluate implementation #3
+12:01:09 Coordinator -> Sales Analyst
+Compare this month's sales with the prior period
 
-12:01:14 CTO started analysis
+12:01:14 Sales Analyst started analysis
 ```
 
 ---
@@ -113,11 +111,10 @@ User dapat melihat:
 
 ```text
 Artifacts
-├── research.md
-├── architecture.md
-├── benchmark.json
-├── review.md
-└── patch.diff
+├── content-draft.md
+├── market-research.md
+├── sales-analysis.csv
+└── review.md
 ```
 
 ---
@@ -128,15 +125,15 @@ Approval Center memiliki dua jalur perhatian. Critical tampil seketika sebagai i
 
 Summary Manager mengumpulkan request high-risk yang eligible dan menampilkan kartu agregat per workspace/run saat interval terkonfigurasi atau akhir siklus. `max_items_per_card` memecah manifest besar menjadi beberapa kartu; overflow tidak di-approve otomatis. Setiap manifest `approval_batch/1` adalah artifact JCS immutable dan kartu menunjuk versi/hash yang dilihat; item baru tidak ikut klik lama. Baris memuat task, aksi/target/dampak, risk, expiry, base/kandidat, evidence, dan status valid/stale. **Inspect items** membuka item untuk approve/reject individual; **Approve All Validated** menjalankan validasi batch. Penjelasan LLM hanya teks bantu, bukan daftar otoritatif.
 
-Klik mengirim `approval.batch_submitted` dengan manifest `batch_hash`/`batch_ref`. Backend memvalidasi actor, envelope, identity, JCS, schema, checksum, urutan serta uniqueness approval IDs. Manifest tak valid ditolak seluruhnya tanpa grant. Setelah manifest valid, tiap item menjalani revalidasi terpisah; item valid menghasilkan grant `scope: once` dengan ID/hash aslinya dan durable per-item processing receipt; item lain menampilkan `skipped` beserta alasan. User tetap dapat inspect, approve, atau reject satu item tanpa menyetujui manifest penuh. Hasil boleh parsial. Batch tidak menyetujui critical, tidak menggabungkan otorisasi, dan tidak melewati pemeriksaan final dispatch atau expected-base CAS.
+Klik mengirim `approval.batch_submitted` dengan manifest `batch_hash`/`batch_ref`. Backend memvalidasi actor, envelope, identity, JCS, schema, checksum, urutan serta uniqueness approval IDs. Manifest tak valid ditolak seluruhnya tanpa grant. Setelah manifest valid, tiap item menjalani revalidasi terpisah; item valid menghasilkan grant `scope: once` dengan ID/hash aslinya dan durable per-item processing receipt; item lain menampilkan `skipped` beserta alasan. User tetap dapat inspect, approve, atau reject satu item tanpa menyetujui manifest penuh. Hasil boleh parsial. Batch tidak menyetujui critical, tidak menggabungkan otorisasi, dan tidak melewati pemeriksaan final dispatch.
 
 ```text
 Digest: 3 high-risk approvals pending
 
 [Approve All Validated]
-Deploy staging       Validated
-Update dependencies  Validated
-Modify API route     Revalidation required
+Publish content      Validated
+Send campaign        Validated
+Export sales report  Revalidation required
 ```
 
 ---
@@ -150,7 +147,7 @@ Contoh `workspace.yaml` utuh. Nama model di bawah bersifat ilustratif dan harus 
 version: "1"
 
 workspace:
-  name: "tunly-company"
+  name: "general-workspace"
 
 server:
   host: "127.0.0.1"
@@ -169,9 +166,10 @@ models:
   policy: jev-latest
   summarizer: cheap-model
   research: medium-model
-  cto: strong-model
-  engineer: strong-model
-  reviewer: medium-model
+  content_creator: strong-model
+  market_researcher: medium-model
+  sales_analyst: strong-model
+  editor: medium-model
   ceo: strong-model
 
 agents:
@@ -182,31 +180,32 @@ agents:
     permissions:
       filesystem: read
 
-  cto:
-    role: "CTO"
+  content_creator:
+    role: "Content Creator"
     model: "strong-model"
-    autonomy: 3
+    autonomy: 2
+    tools:
+      - writer
+      - filesystem
 
-  research:
-    role: "Research"
+  market_researcher:
+    role: "Market Researcher"
     model: "medium-model"
     autonomy: 2
     tools:
       - browser
       - search
 
-  engineer:
-    role: "Engineer"
+  sales_analyst:
+    role: "Sales Analyst"
     model: "strong-model"
     autonomy: 2
-    prompt_template: "templates/engineer.yaml"   # Base Identity Template (5A.4)
     tools:
+      - spreadsheet
       - filesystem
-      - shell
-      - git
 
-  reviewer:
-    role: "Reviewer"
+  editor:
+    role: "Editor"
     model: "medium-model"
     autonomy: 2
     permissions:
@@ -221,26 +220,20 @@ tool_capabilities:
     idempotent: false
     operation_key_enforced: false
 
-# Pengambil keputusan akhir debat/putusan teknis (#30.1, #48)
-escalation_lead: "cto"        # atau "human" -> diserahkan ke dashboard
+# Pengambil keputusan akhir debat (#30.1, #48)
+escalation_lead: "editor"     # atau "human" -> diserahkan ke dashboard
 
-# Toolchain deklaratif untuk Compiler Gate / Deterministic Toolchain Runner (5A.22)
+# Toolchain opsional untuk validasi artifact sesuai domain task
 toolchain:
-  type: "rust"          # atau node, go, python (polyglot)
-  shared_cache_dir: "/tmp/societas-cache/rust-shared"
+  type: "general"
+  shared_cache_dir: "/tmp/societas-cache"
   pipeline:             # fail-fast: berhenti di step pertama yang gagal
-    - name: "format"
-      cmd: "cargo fmt --check"
-      parser: "regex"
-    - name: "check"
-      cmd: "cargo check --message-format=json"
-      parser: "cargo_json"
-    - name: "clippy"
-      cmd: "cargo clippy --message-format=json -- -D warnings"
-      parser: "cargo_json"
-    - name: "test"
-      cmd: "cargo nextest run"
-      parser: "raw_tail"
+    - name: "source_check"
+      cmd: "validate-sources"
+      parser: "json"
+    - name: "artifact_check"
+      cmd: "validate-artifact"
+      parser: "json"
 
 # Evaluasi risiko dinamis -> risk_tier / risk_tags task (#23.1, 72A.5)
 risk:
@@ -253,29 +246,24 @@ risk:
   max_items_per_card: 20
   path_patterns:
     critical:
-      - "migrations/**"
-      - "infra/**"
-      - "contracts/**"
-      - "src/consensus/**"
+      - "customer-data/**"
+      - "finance/**"
+      - "published/**"
+      - "credentials/**"
     high:
-      - "src/auth/**"
-      - "src/api/**"
-      - "scripts/cache-cleanup/**"
-      - "Cargo.toml"
-      - "package*.json"
-      - "go.mod"
+      - "sales-data/**"
+      - "campaigns/**"
+      - "customer-reports/**"
   intent_keywords:
     critical:
-      - "drop database"
-      - "force push"
-      - "break consensus"
-      - "payout"
+      - "delete customer data"
+      - "publish publicly"
+      - "send campaign"
       - "transfer funds"
     high:
-      - "modify api route"
-      - "update dependencies"
-      - "cleanup cache"
-      - "isolated shell script"
+      - "export sales data"
+      - "change pricing"
+      - "publish scheduled content"
 
 # Session Policy & Prompt Caching (I23)
 session_policy:
@@ -286,7 +274,7 @@ session_policy:
 
 `providers` mengikuti isolasi key dan accounting di [§32.1](06-permissions-approvals-roles.md#321-provider-usage-accounting-openrouter). `models` memakai pemetaan peran di [5A.8 — Model Router](02-ai-control-plane.md#5a8-model-router). `tool_capabilities` adalah konfigurasi retry tepercaya di [§21](05-artifacts-memory-tools.md#21-tools), bukan klaim dari agen.
 
-`toolchain` menjalankan [5A.22 — Compiler Gate](02-ai-control-plane.md#compiler-gate-sebelum-reviewer-dipanggil). Contoh ini memakai toolchain Rust untuk workspace target; runtime Societas sendiri menggunakan Go. `escalation_lead` memilih agent yang terdaftar atau `human` (#30.1, #48).
+`toolchain` bersifat opsional dan menjalankan validator yang relevan dengan artifact/workflow yang dipilih; workspace tanpa validator lokal tetap dapat menggunakan tool jarak jauh sesuai permission. `escalation_lead` memilih agent yang terdaftar atau `human` (#30.1, #48).
 
 `approval_delivery` mengatur jalur notifikasi, bukan permission, approval, atau expiry. Jika tidak dikonfigurasi, gunakan `immediate`; konfigurasi invalid ditolak, jangan memakai fallback yang melonggarkan policy. Saat `high_mode: digest`, `digest_interval_seconds` dan `max_items_per_card` wajib finite dan positif. Batas item memecah kartu, bukan auto-grant overflow. Akhir siklus berarti scheduler quiescent tanpa task runnable; task yang parked tidak membuat sistem menunggu hingga terminal. Persist waktu/membership notifikasi untuk restart. Critical selalu immediate dan tidak dapat diturunkan lewat setting; path/intent high tetap tunduk pada klasifikasi critical.
 
@@ -311,8 +299,8 @@ run history
 approvals
 approval batch manifests (immutable artifact refs)
 approval batch item receipts (idempotency/recovery key per batch + approval ID)
-confirmed merge receipts (approval/evidence/Git ref binding)
-semantic evidence and decision artifact refs/checksums (Operational Store indexes)
+versioned source references and checksums
+review/approval evidence and artifact references
 artifact metadata
 memory (entry terstruktur)
 usage / akumulasi budget
@@ -325,15 +313,15 @@ File artifacts tetap disimpan sebagai files. Database hanya menyimpan metadata.
 Menyimpan representasi semantik yang sudah lolos admission guard #19.6, bukan data operasional:
 
 ```text
-approved decision/spec yang semantic-pass dan merge-receipt-confirmed
+approved decision/spec dengan sumber dan versi terverifikasi
 ringkasan dari sumber eligible yang sama
 koordinat semantik memory eligible yang masih fresh
 anti-pattern yang ditolak (cognitive_guardrail: true, tag: anti-pattern)
 ```
 
-`artifact.created` hanya mencatat persistence, bukan trigger embedding. Approval snapshot + semantic evidence + confirmed merge receipt harus cocok dan freshness/supersede guard lulus sebelum cognitive admission (I19/72A.10). Implementasi: embedded vector DB seperti **ChromaDB** atau **`sqlite-vec`**. Embedding dihasilkan oleh model embedding lokal yang ringan — bukan model chat utama.
+`artifact.created` hanya mencatat persistence, bukan trigger embedding. Source version, approval state bila diperlukan, serta freshness/supersede guard harus cocok sebelum cognitive admission. Implementasi: embedded vector DB seperti **ChromaDB** atau **`sqlite-vec`**. Embedding dihasilkan oleh model embedding lokal yang ringan — bukan model chat utama.
 
-**Anti-pattern storage:** keputusan atau proposal arsitektur yang didebat lalu ditolak (misal via `decision.md` hasil arbitrase atau penolakan human) tidak dibuang. Ringkasan kondisi batasannya diekstraksi ke Vector DB dengan metadata `cognitive_guardrail: true` dan tag `anti-pattern`. Anti-pattern ini diisolasi secara struktural di prompt LLM menggunakan blok XML (`<confirmed_blacklist>`) oleh Context Manager (5A.4) agar model memperlakukannya sebagai penalti/filter validasi akhir, bukan contoh untuk ditiru.
+**Anti-pattern storage:** keputusan atau proposal yang ditolak tidak dibuang begitu saja. Ringkasan kondisi batasannya dapat disimpan sebagai memory dengan metadata `cognitive_guardrail: true` dan tag `anti-pattern`, setelah pemeriksaan sensitivitas dan policy.
 
 ## 37.3 Pemisahan Tanggung Jawab
 
@@ -341,6 +329,6 @@ anti-pattern yang ditolak (cognitive_guardrail: true, tag: anti-pattern)
 - SQLite tidak pernah dipakai untuk pencarian teks mentah atau `LIKE`.
 - Vector DB tidak pernah dipakai untuk relasi data, status, atau ledger — itu tanggung jawab SQLite.
 - ID hasil retrieval Vector DB **wajib di-validasi ulang ke SQLite** sebelum masuk context: yang `superseded` atau `stale` dibuang (#19.6 Memory Curation).
-- Admission mengecek sumber Operational Store: approval snapshot/hash, semantic evidence ref, confirmed merge receipt, serta status freshness/supersede yang mengikat workspace/run/task/candidate sama. Artifact belum admitted atau masih quarantine tidak boleh diretrieve meskipun vector row tertinggal.
+- Admission mengecek source version, approval bila diwajibkan, serta status freshness/supersede di Operational Store. Artifact belum admitted atau masih quarantine tidak boleh diretrieve meskipun vector row tertinggal.
 
 ---

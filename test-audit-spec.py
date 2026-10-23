@@ -13,15 +13,17 @@ SPEC.loader.exec_module(AUDIT)
 
 
 class AuditTests(unittest.TestCase):
-    def run_fixture(self, before: str = "", after: str = "", filename: str = "10-contracts-mvp-roadmap.md") -> dict:
+    def run_fixture(self, before: str = "", after: str = "", filename: str = "10-contracts-legacy.md") -> dict:
         with tempfile.TemporaryDirectory(prefix="societas-audit-test-") as directory:
             root = Path(directory)
-            for path in ROOT.glob("*.md"):
+            for path in ROOT.rglob("*.md"):
                 text = path.read_text(encoding="utf-8")
                 if before and path.name == filename:
                     self.assertIn(before, text)
                     text = text.replace(before, after, 1)
-                (root / path.name).write_text(text, encoding="utf-8")
+                destination = root / path.relative_to(ROOT)
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                destination.write_text(text, encoding="utf-8")
             return AUDIT.audit(root, None)
 
     def assert_failed(self, report: dict, prefix: str) -> None:
@@ -152,7 +154,7 @@ class AuditTests(unittest.TestCase):
 
     def test_shifted_number_with_valid_anchor_is_detected(self) -> None:
         report = self.run_fixture(
-            "[5A.22 — Compiler Gate]", "[5A.21 — Compiler Gate]",
+            "[5A.8 — Model Router]", "[5A.7 — Model Router]",
             "06-permissions-approvals-roles.md",
         )
         self.assert_failed(report, "link_section:")

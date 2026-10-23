@@ -12,6 +12,8 @@ Format: JSON Schema (draft 2020-12), netral terhadap bahasa. Implementasi (Go, T
 
 Contoh di section ini divalidasi terhadap schema yang sama (lihat 72A.13).
 
+**Batas scope MVP general:** Git merge, worktree, candidate commit/tree, merge receipt, serta invariants I17/I19 dan schema `git.merge` adalah profil ekstensi engineering masa depan, bukan kebutuhan runtime inti. Detail operasionalnya dipisahkan ke `archive/git-engineering-workflows.md`; kontrak di bawah dipertahankan untuk kompatibilitas dan kemungkinan penggunaan nanti. Workflow general memakai task, artifact, review, serta approval `tool.execute`/`budget.increase` sesuai policy.
+
 ## 72A.1 Aturan Dasar (Invariants)
 
 Aturan ini ditegakkan oleh runtime, bukan oleh prompt agent.
@@ -34,13 +36,13 @@ Aturan ini ditegakkan oleh runtime, bukan oleh prompt agent.
 | I14 | Agent tidak dapat mengubah budget, policy, atau limit miliknya sendiri. Hanya human (lewat approval) yang dapat menaikkannya. | Budget Manager + Policy Engine |
 | I15 | Event wajib ter-commit ke Event Store (SQLite) **sebelum** disalurkan ke subscriber (transactional outbox, #42.1). Tidak ada delivery dari memory saja. | Event Bus + Event Store |
 | I16 | Retry tool yang mungkin sudah berjalan hanya boleh jika tool dinyatakan `idempotent` di capability tepercaya (#21) atau request membawa `operation_key` stabil yang deduplikasinya ditegakkan provider tool. Kegagalan dengan hasil tidak diketahui (`outcome_unknown`) pada tool non-idempotent wajib rekonsiliasi atau keputusan human — tidak auto-retry. | Tool Runtime + Policy Engine |
-| I17 | Approval mengikat snapshot input berversi melalui `sha256(JCS(snapshot))`. Merge hanya memakai kandidat final sesudah rebase + gate + Semantic Rebase `PASS` + review; semantic conflict/inconclusive memblokir integrasi dan dieskalasi. Perubahan base/kandidat/input terikat membatalkan approval dan evidence terkait. Update target memakai expected-base CAS, bukan merge commit baru sesudah approval. | Policy Engine + Orchestrator + Git executor |
+| I17 | [Ekstensi Git] Approval mengikat snapshot input berversi melalui `sha256(JCS(snapshot))`. Merge hanya memakai kandidat final sesudah rebase + gate + Semantic Rebase `PASS` + review; semantic conflict/inconclusive memblokir integrasi dan dieskalasi. Perubahan base/kandidat/input terikat membatalkan approval dan evidence terkait. Update target memakai expected-base CAS, bukan merge commit baru sesudah approval. | Policy Engine + Orchestrator + Git executor |
 | I18 | Digest hanya menggabungkan presentasi/klik human, bukan otorisasi. Tiap item high diperiksa dan di-grant terpisah terhadap snapshot-nya; critical tidak pernah masuk digest. Unique key `(workspace_id, run_id, batch_hash, approval_id)` menghasilkan satu durable receipt/outcome per item. Menunggu approval melepaskan worker dan tidak mengeksekusi mutasi lebih awal. | Policy Engine + Approval Center + Orchestrator |
-| I19 | Merge memerlukan semantic evidence `pass` yang terikat base/kandidat yang sama sesudah deterministic gate dan sebelum review/approval. Conflict atau hasil inconclusive memblokir integrasi; arbitrase/refactor mengulang rebase, gate, semantic, review, dan approval. Keputusan/spec baru tidak di-embed sebelum approval, semantic pass, dan merge receipt terkonfirmasi serta direkonsiliasi. | Merge Queue + Reviewer + Memory Curator |
-| I20 | Compiler Gate & Local Toolchain menggunakan **log inactivity timeout** (5 menit tanpa output baru pada `stdout`/`stderr`) untuk mendeteksi deadlock/infinite loop, bukan hard execution timeout durasi total, karena performa kompilasi bervariasi drastis per hardware. Kegagalan build/lint dibatasi maksimal 3 iterasi perbaikan; setelah itu task dibekukan (`status: blocked`) dan dieskalasi ke `escalation_lead` atau manusia. | Tool Runtime + Orchestrator |
+| I19 | [Ekstensi Git] Merge memerlukan semantic evidence `pass` yang terikat base/kandidat yang sama sesudah deterministic gate dan sebelum review/approval. Conflict atau hasil inconclusive memblokir integrasi; arbitrase/refactor mengulang rebase, gate, semantic, review, dan approval. Keputusan/spec baru tidak di-embed sebelum approval, semantic pass, dan merge receipt terkonfirmasi serta direkonsiliasi. | Merge Queue + Reviewer + Memory Curator |
+| I20 | Eksekusi tool dan validator wajib mematuhi timeout, retry budget, dan rekonsiliasi hasil sesuai capability tool; hasil yang tidak diketahui tidak boleh auto-retry untuk aksi non-idempotent (I16). Validator lokal bersifat domain-specific dan opsional. | Tool Runtime + Orchestrator |
 | I21 | Penanganan jaringan terputus menggunakan pendekatan **murni deterministik di Go Runtime** (0 token). Tolak fallback router offline berbasis ONNX/regex. Deteksi jaringan sepenuhnya tugas Go Runtime melalui healthcheck deterministik cepat (socket ping/HEAD request ke DNS publik). Jika internet terkonfirmasi putus, Go Runtime memicu auto-pause via CAS pada SQLite, menyimpan checkpoint dan deadline, lalu melepaskan worker pool. Background daemon memantau pemulihan koneksi dan menerbitkan `task.resumed` saat online kembali tanpa duplikasi event. | Go Runtime + Orchestrator |
 | I22 | Anti-pattern memory disimpan di Vector DB dengan metadata `cognitive_guardrail: true` dan tag `anti-pattern` (keputusan yang ditolak tidak dibuang). Context Manager wajib mengisolasi memori secara struktural menggunakan blok XML saat merakit prompt LLM: rekomendasi positif di `<historical_success>` dan batasan negatif di `<confirmed_blacklist>` di bagian paling bawah. Struktur ini mengunci mekanisme atensi model agar memperlakukan batasan negatif sebagai penalti/filter validasi akhir, bukan contoh untuk ditiru. | Context Manager + Memory Curator |
-| I23 | **Sumber utama Session Policy.** Konfigurasi di `workspace.yaml` (#36) memakai `sticky_until_done` (default) atau `stateless_step`. Mode sticky mempertahankan thread/sesi provider selama task `running`. Hierarki prompt statis ke dinamis: `System Prompt & Role` → `Tool Schemas` → `PROJECT_MAP.md` → `Recent History` → `Input Baru`; usage cache diukur lewat `cached_input_tokens` (72A.5). Sesi wajib di-flush dan ditutup saat task terminal (`completed`, `failed`, `cancelled`) atau parked (`awaiting_approval`, `paused`, `interrupted`, `blocked`): ringkasan/checkpoint dipersist ke SQLite dan worker dilepas (#40.1). Saat mencapai `max_turns_before_flush`, Summarizer menyimpan ringkasan ke SQLite lalu sesi di-reset untuk mencegah context rot dan biaya O(N²). Mode stateless merakit ulang context per turn dan menutup sesi setiap selesai satu panggilan model. | Context Manager + Orchestrator |
+| I23 | **Sumber utama Session Policy.** Konfigurasi di `workspace.yaml` (#36) memakai `sticky_until_done` (default) atau `stateless_step`. Mode sticky mempertahankan thread/sesi provider selama task `running`. Hierarki prompt statis ke dinamis: `System Prompt & Role` → `Tool Schemas` → `Workspace Brief` → `Recent History` → `Input Baru`; usage cache diukur lewat `cached_input_tokens` (72A.5). Sesi wajib di-flush dan ditutup saat task terminal (`completed`, `failed`, `cancelled`) atau parked (`awaiting_approval`, `paused`, `interrupted`, `blocked`): ringkasan/checkpoint dipersist ke SQLite dan worker dilepas (#40.1). Saat mencapai `max_turns_before_flush`, Summarizer menyimpan ringkasan ke SQLite lalu sesi di-reset untuk mencegah context rot dan biaya O(N²). Mode stateless merakit ulang context per turn dan menutup sesi setiap selesai satu panggilan model. | Context Manager + Orchestrator |
 
 ## 72A.2 Identifier & Addressing
 
@@ -1618,7 +1620,7 @@ Menggabungkan kategori di #44 dengan kode di 5A.15. Satu kode punya satu kategor
 | `INVALID_OUTPUT` | `INVALID_OUTPUT` | ya | Agent correction, maksimal 2 kali (I10). |
 | `TOOL_INPUT_INVALID` | `INVALID_OUTPUT` | ya | Agent correction dengan pesan error dari tool schema. |
 | `TOOL_FAILED` | `TOOL_ERROR` | tergantung tool | Retry mengikuti outcome dan capability I16; gagal logis yang diketahui bukan alasan mengulang mutasi secara buta. |
-| `TOOL_TIMEOUT` | `TIMEOUT` | tergantung tool | `outcome_unknown` — retry hanya jika tool `idempotent` atau `operation_key` ditegakkan provider (I16); jika tidak, rekonsiliasi atau keputusan human. Untuk compiler/test di Local Toolchain ([5A.22 — Compiler Gate](02-ai-control-plane.md#compiler-gate-sebelum-reviewer-dipanggil), 60.2), timeout menggunakan **log inactivity monitoring** (5 menit tanpa output baru) karena performa kompilasi bervariasi drastis per hardware; bukan hard execution timeout durasi total. |
+| `TOOL_TIMEOUT` | `TIMEOUT` | tergantung tool | `outcome_unknown` — retry hanya jika tool `idempotent` atau `operation_key` ditegakkan provider (I16); jika tidak, rekonsiliasi atau keputusan human. Timeout mengikuti capability dan policy tool yang dikonfigurasi; validator domain dapat memakai batas yang sesuai pekerjaannya. |
 | `NETWORK_ERROR` | `NETWORK_ERROR` | tergantung operasi | Pada tool: `outcome_unknown` kecuali ada bukti belum dispatch; I16 wajib. Pada model call: ikuti guard dan accounting I4, bukan asumsi call gratis. |
 | `SEARCH_BLOCK_NOT_FOUND` | `TOOL_ERROR` | tidak | Bukan retry runtime — error dikembalikan ke agent; agent wajib membaca ulang file asli sebelum mengirim blok baru (#60.3). |
 | `SEARCH_BLOCK_AMBIGUOUS` | `TOOL_ERROR` | tidak | Blok `SEARCH` cocok di lebih dari satu lokasi — perubahan **tidak diterapkan**; agent harus memperlebar konteks blok (#60.3). |
@@ -1715,13 +1717,13 @@ Urutan di bawah ini adalah kontrak perilaku. Urutan event harus sesuai.
 
 Receipt skipped tidak memuat grant; duplicate key dengan payload berbeda ditolak, bukan di-rebind. Kegagalan persistence tidak menghasilkan jawaban sukses. Recovery yang melintasi SQLite/Event Store terpisah dijelaskan di [DEC-002] W06 (Multi-Store Recovery Protocol).
 
-### Review (Local Compiler Gate, [5A.22](02-ai-control-plane.md#compiler-gate-sebelum-reviewer-dipanggil))
+### Review (Domain Validation, [5A.22](02-ai-control-plane.md#domain-validation-sebelum-review))
 
 ```text
-1. Engineer selesai -> artifact.created (patch/code)
-2. backend Go menjalankan build/linter lokal (0 token):
-     gagal -> task kembali ke Engineer dengan error log (tanpa LLM review)
-3. lolos  -> review_requested -> Reviewer LLM
+1. Task owner selesai -> artifact.created
+2. Validator domain yang dikonfigurasi dijalankan bila ada:
+  gagal -> findings dikembalikan ke task owner
+3. lolos / tidak dikonfigurasi -> review_requested -> Reviewer
 4. review_completed (approve | request_changes | reject)
      request_changes -> rebuttal max 2 putaran (#48)
 ```
@@ -1831,7 +1833,16 @@ Payload lengkap untuk langkah-langkah penting:
   "payload": {
     "goal": "Evaluasi apakah kita perlu menambahkan fitur baru.",
     "entry_agent": "ceo",
-    "budget_request": { "max_total_tokens": 60000, "max_cost_usd": 1.00 }
+    "budget_request": {
+      "max_total_tokens": 60000,
+      "max_cost_usd": 1.0
+    }
+  },
+  "principal": {
+    "principal_id": "usr_01J9ZBKGD7AHHWX216KWWYZH2T",
+    "principal_type": "human",
+    "session_id": "ses_01J9ZBKGD7AHHWX216KWWYZH2T",
+    "auth_digest": "hmac_sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   }
 }
 ```
@@ -1868,24 +1879,42 @@ Payload lengkap untuk langkah-langkah penting:
       "deadline": null,
       "depth": 0,
       "attempt": 1,
-      "expected_output": { "kind": "decision", "format": "markdown" },
+      "expected_output": {
+        "kind": "decision",
+        "format": "markdown"
+      },
       "budget": {
         "granted": {
           "max_total_tokens": 60000,
-          "max_cost_usd": 1.00,
+          "max_cost_usd": 1.0,
           "max_model_calls": 30,
           "max_child_tasks": 5,
           "max_depth": 4,
           "max_parallel_agents": 4,
           "max_agent_iterations": 8,
-          "retry": { "max_attempts": 2, "max_total_retry_cost_usd": 0.10 }
+          "retry": {
+            "max_attempts": 2,
+            "max_total_retry_cost_usd": 0.1
+          }
         },
-        "used": { "input_tokens": 0, "output_tokens": 0, "model_calls": 0, "tool_calls": 0, "estimated_cost_usd": 0 }
+        "used": {
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "model_calls": 0,
+          "tool_calls": 0,
+          "estimated_cost_usd": 0
+        }
       },
       "working_directory": "/workspace/artifacts/RUN-001/TASK-001",
       "created_at": "2026-10-06T09:00:01Z",
       "updated_at": "2026-10-06T09:00:01Z"
     }
+  },
+  "principal": {
+    "principal_id": "sys_01J9ZBKGD7AHHWX216KWWYZH2T",
+    "principal_type": "system",
+    "session_id": "ses_01J9ZBKGD7AHHWX216KWWYZH2T",
+    "auth_digest": "hmac_sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   }
 }
 ```
@@ -1912,14 +1941,44 @@ Payload lengkap untuk langkah-langkah penting:
     "token_budget": 12000,
     "tokens_used": 2250,
     "items": [
-      { "kind": "system_prompt", "ref": "prompt:ceo", "tokens": 900, "reason": "wajib" },
-      { "kind": "role", "ref": "role:ceo", "tokens": 250, "reason": "wajib" },
-      { "kind": "task", "ref": "TASK-001", "tokens": 400, "reason": "task saat ini" },
-      { "kind": "memory", "ref": "mem:arch-decision-transport", "tokens": 700, "reason": "keputusan transport sebelumnya relevan" }
+      {
+        "kind": "system_prompt",
+        "ref": "prompt:ceo",
+        "tokens": 900,
+        "reason": "wajib"
+      },
+      {
+        "kind": "role",
+        "ref": "role:ceo",
+        "tokens": 250,
+        "reason": "wajib"
+      },
+      {
+        "kind": "task",
+        "ref": "TASK-001",
+        "tokens": 400,
+        "reason": "task saat ini"
+      },
+      {
+        "kind": "memory",
+        "ref": "mem:arch-decision-transport",
+        "tokens": 700,
+        "reason": "keputusan transport sebelumnya relevan"
+      }
     ],
     "dropped": [
-      { "kind": "memory", "ref": "mem:finance-notes-2026q2", "reason": "low_relevance" }
+      {
+        "kind": "memory",
+        "ref": "mem:finance-notes-2026q2",
+        "reason": "low_relevance"
+      }
     ]
+  },
+  "principal": {
+    "principal_id": "sys_01J9ZBKGD7AHHWX216KWWYZH2T",
+    "principal_type": "system",
+    "session_id": "ses_01J9ZBKGD7AHHWX216KWWYZH2T",
+    "auth_digest": "hmac_sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   }
 }
 ```
@@ -1951,6 +2010,12 @@ Payload lengkap untuk langkah-langkah penting:
     },
     "finish_reason": "stop",
     "confidence": 0.82
+  },
+  "principal": {
+    "principal_id": "sys_01J9ZBKGD7AHHWX216KWWYZH2T",
+    "principal_type": "system",
+    "session_id": "ses_01J9ZBKGD7AHHWX216KWWYZH2T",
+    "auth_digest": "hmac_sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   }
 }
 ```
@@ -1978,11 +2043,28 @@ Payload lengkap untuk langkah-langkah penting:
     "goal": "Bandingkan latency, reliability, dan kompleksitas implementasi gRPC vs REST. Berikan rekomendasi singkat dan sumber.",
     "rationale": "Keputusan butuh data pembanding terbaru. Memory CEO tidak memiliki benchmark.",
     "requested_assignee": "research",
-    "expected_output": { "kind": "artifact", "format": "markdown" },
+    "expected_output": {
+      "kind": "artifact",
+      "format": "markdown"
+    },
     "priority": "high",
     "complexity_hint": "medium",
-    "context_hints": { "memory_queries": ["gRPC benchmark", "REST implementation"] },
-    "budget_request": { "max_total_tokens": 12000, "max_cost_usd": 0.20 }
+    "context_hints": {
+      "memory_queries": [
+        "gRPC benchmark",
+        "REST implementation"
+      ]
+    },
+    "budget_request": {
+      "max_total_tokens": 12000,
+      "max_cost_usd": 0.2
+    }
+  },
+  "principal": {
+    "principal_id": "agt_01J9ZBKGD7AHHWX216KWWYZH2T",
+    "principal_type": "agent",
+    "session_id": "ses_01J9ZBKGD7AHHWX216KWWYZH2T",
+    "auth_digest": "hmac_sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   }
 }
 ```
@@ -2019,21 +2101,36 @@ Payload lengkap untuk langkah-langkah penting:
       "deadline": null,
       "depth": 1,
       "attempt": 1,
-      "expected_output": { "kind": "artifact", "format": "markdown" },
+      "expected_output": {
+        "kind": "artifact",
+        "format": "markdown"
+      },
       "budget": {
         "granted": {
           "max_total_tokens": 12000,
-          "max_cost_usd": 0.20,
+          "max_cost_usd": 0.2,
           "max_model_calls": 10,
           "max_tool_calls": 20,
           "max_time_seconds": 300
         },
-        "used": { "input_tokens": 0, "output_tokens": 0, "model_calls": 0, "tool_calls": 0, "estimated_cost_usd": 0 }
+        "used": {
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "model_calls": 0,
+          "tool_calls": 0,
+          "estimated_cost_usd": 0
+        }
       },
       "working_directory": "/workspace/artifacts/RUN-001/TASK-002",
       "created_at": "2026-10-06T09:00:10Z",
       "updated_at": "2026-10-06T09:00:10Z"
     }
+  },
+  "principal": {
+    "principal_id": "sys_01J9ZBKGD7AHHWX216KWWYZH2T",
+    "principal_type": "system",
+    "session_id": "ses_01J9ZBKGD7AHHWX216KWWYZH2T",
+    "auth_digest": "hmac_sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   }
 }
 ```
@@ -2058,8 +2155,16 @@ Payload lengkap untuk langkah-langkah penting:
   "payload": {
     "tool_call_id": "tc_01J9ZBGP79PCNF7AHK55JHQBKY",
     "tool": "web.search",
-    "arguments": { "query": "gRPC vs REST latency benchmark" },
+    "arguments": {
+      "query": "gRPC vs REST latency benchmark"
+    },
     "timeout_ms": 20000
+  },
+  "principal": {
+    "principal_id": "agt_01J9ZBKGD7AHHWX216KWWYZH2T",
+    "principal_type": "agent",
+    "session_id": "ses_01J9ZBKGD7AHHWX216KWWYZH2T",
+    "auth_digest": "hmac_sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   }
 }
 ```
@@ -2085,6 +2190,12 @@ Payload lengkap untuk langkah-langkah penting:
     "output": "8 hasil ditemukan.",
     "truncated": false,
     "duration_ms": 1840
+  },
+  "principal": {
+    "principal_id": "sys_01J9ZBKGD7AHHWX216KWWYZH2T",
+    "principal_type": "system",
+    "session_id": "ses_01J9ZBKGD7AHHWX216KWWYZH2T",
+    "auth_digest": "hmac_sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   }
 }
 ```
@@ -2119,6 +2230,12 @@ Payload lengkap untuk langkah-langkah penting:
       "created_by": "agent:research",
       "created_at": "2026-10-06T09:01:30Z"
     }
+  },
+  "principal": {
+    "principal_id": "agt_01J9ZBKGD7AHHWX216KWWYZH2T",
+    "principal_type": "agent",
+    "session_id": "ses_01J9ZBKGD7AHHWX216KWWYZH2T",
+    "auth_digest": "hmac_sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   }
 }
 ```
@@ -2148,12 +2265,26 @@ Payload lengkap untuk langkah-langkah penting:
       "model": "cheap-model",
       "body": {
         "text": "gRPC unggul pada performa dan type-safety. REST lebih sederhana dan lebih matang tooling-nya.",
-        "findings": ["gRPC mengurangi latency pada high-throughput calls", "REST cukup untuk mode lokal"],
-        "risks": ["Kompleksitas implementasi gRPC lebih tinggi"],
+        "findings": [
+          "gRPC mengurangi latency pada high-throughput calls",
+          "REST cukup untuk mode lokal"
+        ],
+        "risks": [
+          "Kompleksitas implementasi gRPC lebih tinggi"
+        ],
         "recommendation": "Mulai dengan HTTP/REST. Evaluasi gRPC ketika throughput menjadi bottleneck.",
-        "sources": ["research.md#benchmark", "research.md#risiko"]
+        "sources": [
+          "research.md#benchmark",
+          "research.md#risiko"
+        ]
       }
     }
+  },
+  "principal": {
+    "principal_id": "sys_01J9ZBKGD7AHHWX216KWWYZH2T",
+    "principal_type": "system",
+    "session_id": "ses_01J9ZBKGD7AHHWX216KWWYZH2T",
+    "auth_digest": "hmac_sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   }
 }
 ```
@@ -2177,8 +2308,12 @@ Payload lengkap untuk langkah-langkah penting:
   "to": "system:orchestrator",
   "payload": {
     "result_status": "success",
-    "artifact_ids": ["art_01J9ZB97J90P9MH8TKCE9C9KF3"],
-    "summary_ids": ["sum_01J9ZB75QCACYADGWFKD86P7W1"],
+    "artifact_ids": [
+      "art_01J9ZB97J90P9MH8TKCE9C9KF3"
+    ],
+    "summary_ids": [
+      "sum_01J9ZB75QCACYADGWFKD86P7W1"
+    ],
     "usage": {
       "input_tokens": 9120,
       "output_tokens": 2240,
@@ -2186,6 +2321,12 @@ Payload lengkap untuk langkah-langkah penting:
       "tool_calls": 2,
       "estimated_cost_usd": 0.087
     }
+  },
+  "principal": {
+    "principal_id": "agt_01J9ZBKGD7AHHWX216KWWYZH2T",
+    "principal_type": "agent",
+    "session_id": "ses_01J9ZBKGD7AHHWX216KWWYZH2T",
+    "auth_digest": "hmac_sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   }
 }
 ```
@@ -2214,8 +2355,17 @@ Payload lengkap untuk langkah-langkah penting:
       "category": "LIMIT_ERROR",
       "message": "TASK-001 sudah memiliki 5 child task aktif (batas 5). Gabungkan pekerjaan atau tunggu salah satu selesai.",
       "retryable": false,
-      "details": { "max_child_tasks": 5, "current_children": 5 }
+      "details": {
+        "max_child_tasks": 5,
+        "current_children": 5
+      }
     }
+  },
+  "principal": {
+    "principal_id": "sys_01J9ZBKGD7AHHWX216KWWYZH2T",
+    "principal_type": "system",
+    "session_id": "ses_01J9ZBKGD7AHHWX216KWWYZH2T",
+    "auth_digest": "hmac_sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   }
 }
 ```
@@ -2245,8 +2395,18 @@ Payload lengkap untuk langkah-langkah penting:
       "category": "BUDGET_ERROR",
       "message": "Budget biaya run RUN-001 tercapai.",
       "retryable": false,
-      "details": { "scope": "run", "used": 1.0, "limit": 1.0 }
+      "details": {
+        "scope": "run",
+        "used": 1.0,
+        "limit": 1.0
+      }
     }
+  },
+  "principal": {
+    "principal_id": "sys_01J9ZBKGD7AHHWX216KWWYZH2T",
+    "principal_type": "system",
+    "session_id": "ses_01J9ZBKGD7AHHWX216KWWYZH2T",
+    "auth_digest": "hmac_sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   }
 }
 ```
@@ -2524,10 +2684,19 @@ OID/ID/policy/recipe di fixture ini sintetis, bukan bukti Git runtime. Konten ar
     "delivery_mode": "immediate",
     "bound_hash": "sha256:9db02ed91537c1ca63d6d09f9895d669ec210a1cab9859b9362592553510d8a3",
     "snapshot_ref": {
-      "artifact_id": "art_01J9ZB6W9B4V3CGZKBZ01PDVKS", "version": 1,
+      "artifact_id": "art_01J9ZB6W9B4V3CGZKBZ01PDVKS",
+      "version": 1,
       "checksum": "sha256:9db02ed91537c1ca63d6d09f9895d669ec210a1cab9859b9362592553510d8a3"
     },
-    "details": { "suggested_increase_usd": 0.30 }
+    "details": {
+      "suggested_increase_usd": 0.3
+    }
+  },
+  "principal": {
+    "principal_id": "sys_01J9ZBKGD7AHHWX216KWWYZH2T",
+    "principal_type": "system",
+    "session_id": "ses_01J9ZBKGD7AHHWX216KWWYZH2T",
+    "auth_digest": "hmac_sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   }
 }
 ```
@@ -2535,23 +2704,38 @@ OID/ID/policy/recipe di fixture ini sintetis, bukan bukti Git runtime. Konten ar
 <!-- example:approval.requested -->
 ```json
 {
-  "protocol_version": "societas/1", "schema_version": "1",
-  "id": "evt_01J9ZB9Y4S06VP158SP5K84RF2", "type": "approval.requested",
+  "protocol_version": "societas/1",
+  "schema_version": "1",
+  "id": "evt_01J9ZB9Y4S06VP158SP5K84RF2",
+  "type": "approval.requested",
   "ts": "2026-10-06T09:30:00Z",
-  "workspace_id": "ws_acme", "run_id": "RUN-001", "task_id": "TASK-001",
+  "workspace_id": "ws_acme",
+  "run_id": "RUN-001",
+  "task_id": "TASK-001",
   "correlation_id": "cor_01J9ZBKGD7AHHWX216KWWYZH2T",
   "causation_id": "evt_01J9ZBS1VHX1W4W4AGPX1QYFDC",
-  "from": "system:policy", "to": "human:user",
+  "from": "system:policy",
+  "to": "human:user",
   "payload": {
     "approval_id": "apr_01J9ZB6W9B4V3CGZKBZ01PDVKM",
-    "action": "git.merge", "reason": "Gate pass dan Reviewer approve pada kandidat final.",
-    "trigger": "policy", "risk": "medium", "delivery_mode": "immediate",
+    "action": "git.merge",
+    "reason": "Gate pass dan Reviewer approve pada kandidat final.",
+    "trigger": "policy",
+    "risk": "medium",
+    "delivery_mode": "immediate",
     "bound_hash": "sha256:9a0ceb01bf3c2e7da96a2c56ae770744b87cd9e284e2c8cab050fe7ee80729b1",
     "snapshot_ref": {
-      "artifact_id": "art_01J9ZB6W9B4V3CGZKBZ01PDVKR", "version": 1,
+      "artifact_id": "art_01J9ZB6W9B4V3CGZKBZ01PDVKR",
+      "version": 1,
       "checksum": "sha256:9a0ceb01bf3c2e7da96a2c56ae770744b87cd9e284e2c8cab050fe7ee80729b1"
     },
     "expires_at": "2026-10-06T10:30:00Z"
+  },
+  "principal": {
+    "principal_id": "sys_01J9ZBKGD7AHHWX216KWWYZH2T",
+    "principal_type": "system",
+    "session_id": "ses_01J9ZBKGD7AHHWX216KWWYZH2T",
+    "auth_digest": "hmac_sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   }
 }
 ```
@@ -2559,23 +2743,38 @@ OID/ID/policy/recipe di fixture ini sintetis, bukan bukti Git runtime. Konten ar
 <!-- example:approval.requested -->
 ```json
 {
-  "protocol_version": "societas/1", "schema_version": "1",
-  "id": "evt_01J9ZB9Y4S06VP158SP5K84RF6", "type": "approval.requested",
+  "protocol_version": "societas/1",
+  "schema_version": "1",
+  "id": "evt_01J9ZB9Y4S06VP158SP5K84RF6",
+  "type": "approval.requested",
   "ts": "2026-10-06T09:35:00Z",
-  "workspace_id": "ws_acme", "run_id": "RUN-001", "task_id": "TASK-001",
+  "workspace_id": "ws_acme",
+  "run_id": "RUN-001",
+  "task_id": "TASK-001",
   "correlation_id": "cor_01J9ZBKGD7AHHWX216KWWYZH2T",
   "causation_id": "evt_01J9ZBS1VHX1W4W4AGPX1QYFDC",
-  "from": "system:policy", "to": "human:user",
+  "from": "system:policy",
+  "to": "human:user",
   "payload": {
     "approval_id": "apr_01J9ZB6W9B4V3CGZKBZ01PDVKW",
-    "action": "tool.execute", "reason": "Update dependency manifest in isolated worktree.",
-    "trigger": "policy", "risk": "high", "delivery_mode": "digest",
+    "action": "tool.execute",
+    "reason": "Update dependency manifest in isolated worktree.",
+    "trigger": "policy",
+    "risk": "high",
+    "delivery_mode": "digest",
     "bound_hash": "sha256:3f629ed1fd3cf4042b9bb510a9308626aa87c49ab2388efe590d9e19f877f06e",
     "snapshot_ref": {
-      "artifact_id": "art_01J9ZB6W9B4V3CGZKBZ01PDVKY", "version": 1,
+      "artifact_id": "art_01J9ZB6W9B4V3CGZKBZ01PDVKY",
+      "version": 1,
       "checksum": "sha256:3f629ed1fd3cf4042b9bb510a9308626aa87c49ab2388efe590d9e19f877f06e"
     },
     "expires_at": "2026-10-06T10:30:00Z"
+  },
+  "principal": {
+    "principal_id": "sys_01J9ZBKGD7AHHWX216KWWYZH2T",
+    "principal_type": "system",
+    "session_id": "ses_01J9ZBKGD7AHHWX216KWWYZH2T",
+    "auth_digest": "hmac_sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   }
 }
 ```
@@ -2583,17 +2782,29 @@ OID/ID/policy/recipe di fixture ini sintetis, bukan bukti Git runtime. Konten ar
 <!-- example:approval.granted -->
 ```json
 {
-  "protocol_version": "societas/1", "schema_version": "1",
-  "id": "evt_01J9ZB9Y4S06VP158SP5K84RF3", "type": "approval.granted",
+  "protocol_version": "societas/1",
+  "schema_version": "1",
+  "id": "evt_01J9ZB9Y4S06VP158SP5K84RF3",
+  "type": "approval.granted",
   "ts": "2026-10-06T09:31:00Z",
-  "workspace_id": "ws_acme", "run_id": "RUN-001", "task_id": "TASK-001",
+  "workspace_id": "ws_acme",
+  "run_id": "RUN-001",
+  "task_id": "TASK-001",
   "correlation_id": "cor_01J9ZBKGD7AHHWX216KWWYZH2T",
   "causation_id": "evt_01J9ZB9Y4S06VP158SP5K84RF2",
-  "from": "human:user", "to": "system:policy",
+  "from": "human:user",
+  "to": "system:policy",
   "payload": {
     "approval_id": "apr_01J9ZB6W9B4V3CGZKBZ01PDVKM",
     "bound_hash": "sha256:9a0ceb01bf3c2e7da96a2c56ae770744b87cd9e284e2c8cab050fe7ee80729b1",
-    "scope": "once", "granted_by": "human:user"
+    "scope": "once",
+    "granted_by": "human:user"
+  },
+  "principal": {
+    "principal_id": "usr_01J9ZBKGD7AHHWX216KWWYZH2T",
+    "principal_type": "human",
+    "session_id": "ses_01J9ZBKGD7AHHWX216KWWYZH2T",
+    "auth_digest": "hmac_sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   }
 }
 ```
@@ -2601,17 +2812,28 @@ OID/ID/policy/recipe di fixture ini sintetis, bukan bukti Git runtime. Konten ar
 <!-- example:approval.invalidated -->
 ```json
 {
-  "protocol_version": "societas/1", "schema_version": "1",
-  "id": "evt_01J9ZB9Y4S06VP158SP5K84RF4", "type": "approval.invalidated",
+  "protocol_version": "societas/1",
+  "schema_version": "1",
+  "id": "evt_01J9ZB9Y4S06VP158SP5K84RF4",
+  "type": "approval.invalidated",
   "ts": "2026-10-06T09:32:00Z",
-  "workspace_id": "ws_acme", "run_id": "RUN-001", "task_id": "TASK-001",
+  "workspace_id": "ws_acme",
+  "run_id": "RUN-001",
+  "task_id": "TASK-001",
   "correlation_id": "cor_01J9ZBKGD7AHHWX216KWWYZH2T",
   "causation_id": "evt_01J9ZB9Y4S06VP158SP5K84RF3",
-  "from": "system:orchestrator", "to": "human:user",
+  "from": "system:orchestrator",
+  "to": "human:user",
   "payload": {
     "approval_id": "apr_01J9ZB6W9B4V3CGZKBZ01PDVKM",
     "bound_hash": "sha256:9a0ceb01bf3c2e7da96a2c56ae770744b87cd9e284e2c8cab050fe7ee80729b1",
     "reason": "base_changed"
+  },
+  "principal": {
+    "principal_id": "sys_01J9ZBKGD7AHHWX216KWWYZH2T",
+    "principal_type": "system",
+    "session_id": "ses_01J9ZBKGD7AHHWX216KWWYZH2T",
+    "auth_digest": "hmac_sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   }
 }
 ```
@@ -2733,19 +2955,30 @@ OID/ID/policy/recipe di fixture ini sintetis, bukan bukti Git runtime. Konten ar
 <!-- example:approval.batch_submitted -->
 ```json
 {
-  "protocol_version": "societas/1", "schema_version": "1",
-  "id": "evt_01J9ZB9Y4S06VP158SP5K84RF5", "type": "approval.batch_submitted",
+  "protocol_version": "societas/1",
+  "schema_version": "1",
+  "id": "evt_01J9ZB9Y4S06VP158SP5K84RF5",
+  "type": "approval.batch_submitted",
   "ts": "2026-10-06T09:40:00Z",
-  "workspace_id": "ws_acme", "run_id": "RUN-001",
+  "workspace_id": "ws_acme",
+  "run_id": "RUN-001",
   "correlation_id": "cor_01J9ZBKGD7AHHWX216KWWYZH2T",
   "causation_id": "evt_01J9ZBS1VHX1W4W4AGPX1QYFDC",
-  "from": "human:user", "to": "system:orchestrator",
+  "from": "human:user",
+  "to": "system:orchestrator",
   "payload": {
     "batch_hash": "sha256:af70e4125e2376b0c361265f48d3f87969de9caad43e8ec6c8a8d2ab77468720",
     "batch_ref": {
-      "artifact_id": "art_01J9ZB6W9B4V3CGZKBZ01PDVKZ", "version": 1,
+      "artifact_id": "art_01J9ZB6W9B4V3CGZKBZ01PDVKZ",
+      "version": 1,
       "checksum": "sha256:af70e4125e2376b0c361265f48d3f87969de9caad43e8ec6c8a8d2ab77468720"
     }
+  },
+  "principal": {
+    "principal_id": "usr_01J9ZBKGD7AHHWX216KWWYZH2T",
+    "principal_type": "human",
+    "session_id": "ses_01J9ZBKGD7AHHWX216KWWYZH2T",
+    "auth_digest": "hmac_sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   }
 }
 ```
@@ -2753,41 +2986,56 @@ OID/ID/policy/recipe di fixture ini sintetis, bukan bukti Git runtime. Konten ar
 <!-- example:task.semantic_conflict -->
 ```json
 {
-  "protocol_version": "societas/1", "schema_version": "1",
-  "id": "evt_01J9ZB9Y4S06VP158SP5K84RF8", "type": "task.semantic_conflict",
+  "protocol_version": "societas/1",
+  "schema_version": "1",
+  "id": "evt_01J9ZB9Y4S06VP158SP5K84RF8",
+  "type": "task.semantic_conflict",
   "ts": "2026-10-06T09:42:00Z",
-  "workspace_id": "ws_acme", "run_id": "RUN-001", "task_id": "TASK-001",
+  "workspace_id": "ws_acme",
+  "run_id": "RUN-001",
+  "task_id": "TASK-001",
   "correlation_id": "cor_01J9ZBKGD7AHHWX216KWWYZH2T",
   "causation_id": "evt_01J9ZBS1VHX1W4W4AGPX1QYFDC",
-  "from": "system:orchestrator", "to": "agent:cto",
+  "from": "system:orchestrator",
+  "to": "agent:cto",
   "payload": {
     "outcome": "conflict",
     "semantic_evidence": {
-      "artifact_id": "art_01J9ZB6W9B4V3CGZKBZ01PDVKC", "version": 1,
+      "artifact_id": "art_01J9ZB6W9B4V3CGZKBZ01PDVKC",
+      "version": 1,
       "checksum": "sha256:7186b9d33078268d83422acdf59d197ca6f0dd9e0ee607014b611400860cce2f"
     },
     "blocked_evidence": {
-      "artifact_id": "art_01J9ZB6W9B4V3CGZKBZ01PDVKC", "version": 1,
+      "artifact_id": "art_01J9ZB6W9B4V3CGZKBZ01PDVKC",
+      "version": 1,
       "checksum": "sha256:7186b9d33078268d83422acdf59d197ca6f0dd9e0ee607014b611400860cce2f"
     },
     "decision_refs": [
       {
         "role": "base",
         "artifact_ref": {
-          "artifact_id": "art_01J9ZB6W9B4V3CGZKBZ01PDVKA", "version": 1,
+          "artifact_id": "art_01J9ZB6W9B4V3CGZKBZ01PDVKA",
+          "version": 1,
           "checksum": "sha256:a3bb507549b094308983e36996697e5636b199557cdfa11eef46eb0a1901aaee"
         }
       },
       {
         "role": "candidate",
         "artifact_ref": {
-          "artifact_id": "art_01J9ZB6W9B4V3CGZKBZ01PDVKB", "version": 2,
+          "artifact_id": "art_01J9ZB6W9B4V3CGZKBZ01PDVKB",
+          "version": 2,
           "checksum": "sha256:da617e4b1c18a341b284f0137b8e53492cd8be8fcdf58ee289052e0c3239c91d"
         }
       }
     ],
     "conflict_summary": "Candidate bypasses the transport adapter boundary.",
     "escalation_lead": "cto"
+  },
+  "principal": {
+    "principal_id": "sys_01J9ZBKGD7AHHWX216KWWYZH2T",
+    "principal_type": "system",
+    "session_id": "ses_01J9ZBKGD7AHHWX216KWWYZH2T",
+    "auth_digest": "hmac_sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   }
 }
 ```
@@ -3459,42 +3707,37 @@ Saat human memberikan persetujuan penambahan budget (`approval.granted` dengan `
 
 ---
 
-# 72A.18 [DEC-005] W15 — MVP Baseline, Event Bus DAG & Non-Git Memory Admission
+# 72A.18 [DEC-005] W15 — MVP Baseline, Event Bus DAG & Memory Admission
 
 ## Context & Problem Statement
 
 - **Ticket ID**: [DEC-005] W15
 - **References**: Doc 10 §81, §103, Doc 09 #60.1/#60.4, Doc 05 #19.6
 - **Problem**:
-  1. Kontradiksi cakupan MVP: Git disebut "opsional" di acceptance §81, tetapi worktree/merge queue diwajibkan untuk Engineer (#60.1/#60.4).
+  1. Kontradiksi cakupan MVP: workflow Git/worktree/merge masih tercampur di spesifikasi engineering, padahal MVP general tidak membutuhkannya.
   2. Urutan pembuatan modul di §103 tidak logis (Event Bus di #21 padahal messaging & delegation di #15/#16 membutuhkan Event Bus).
   3. Aturan penerimaan memori non-Git (dokumen riset, decision.md, human approval) ke Vector DB belum ditetapkan.
 - **Required Deliverables**:
-  1. Kebijakan final dependensi Git per tipe workspace.
+  1. Kebijakan final: Git bukan dependency MVP; engineering/Git hanya extension masa depan.
   2. Dependency Graph (DAG) urutan pengembangan §103 yang telah direvisi.
   3. Protokol penerimaan memori non-Git (Non-Git Memory Admission Rules).
 
-## MVP Baseline Scope: Git Policy
+## MVP Baseline Scope: Tool Policy
 
 ```text
                              +-----------------------+
                              |   Workspace Creation  |
                              +-----------------------+
-                                         |
-                       +-----------------+-----------------+
-                       |                                   |
-           [Developer Workspace]               [Non-Developer Workspace]
-           (Engineer, Reviewer, Code)          (Research, Strategy, Content)
-                       |                                   |
-                       v                                   v
-             Git MANDATORY                        Git OPTIONAL
-  - Git Worktree per Task (.worktrees/)  - Path Jailing (/workspace/artifacts/)
-  - Serial Merge Queue & Rebase          - Direct File System Artifacts
-  - Search & Replace Code Edits          - No Git Repo Initialized Required
+                                 |
+                             Configured tool capabilities
+                                 |
+                         +-----------------------+----------------------+
+                         |                       |                      |
+                       Browser/Search           Spreadsheet          Optional Git
+                          + Filesystem           connector             extension
 ```
 
-**Pembaruan Teks §81 (MVP Acceptance)**:
-`Tools: filesystem (wajib), restricted shell (wajib), git (wajib untuk Developer Workspace / Engineer Agent; opsional untuk Non-Developer Workspace).`
+**Pembaruan Teks §81 (MVP Acceptance)**: tool yang aktif ditentukan oleh workflow dan permission workspace. Git dan shell bukan dependency MVP general.
 
 ## Revised Immediate Development Order (§103 Dependency DAG)
 
@@ -3885,13 +4128,14 @@ MVP harus kecil.
 Target MVP:
 
 ```text
-User
+Human
  ↓
-CEO
- ├── Research
- └── CTO
+Coordinator
+ ├── Market Researcher
+ ├── Sales Analyst
+ └── Content Creator
        ↓
-     Engineer
+     Editor
 ```
 
 Capabilities:
@@ -3938,53 +4182,46 @@ Dashboard:
 ```text
 SOCIETAS
 
-CEO        ● Working
-CTO        ● Working
-Research   ● Working
-Engineer   ○ Idle
+Coordinator       ● Working
+Market Research  ● Working
+Sales Analyst    ● Working
+Content Creator  ○ Idle
+Editor            ○ Idle
 ```
 
 User:
 
 ```text
-CEO:
-"Research apakah event-driven architecture
-cocok untuk multi-agent system."
+Human:
+"Buat strategi konten dari tren pasar dan performa penjualan bulan ini."
 ```
 
-CEO:
+Coordinator:
 
 ```text
-Assigning:
+Coordinator:
 
-Research -> technology research
-CTO      -> architecture evaluation
+Market Researcher -> cari tren dan kompetitor
+Sales Analyst     -> analisis performa penjualan
+Content Creator   -> siapkan draft untuk audiens
 ```
 
-Research berjalan.
+Riset dan analisis berjalan paralel.
 
-CTO berjalan paralel.
+Content Creator menyusun draft dari hasilnya.
 
-CEO menggabungkan hasil.
+Editor memeriksa klaim, sumber, dan kesesuaian brief.
 
-Kemudian:
+Artifacts:
 
 ```text
-CEO:
-"Engineer, build a minimal prototype."
+market-research.md
+sales-analysis.csv
+content-draft.md
+review.md
 ```
 
-Engineer membuat:
-
-```text
-prototype/
-benchmark/
-report.md
-```
-
-Reviewer mengecek.
-
-User mendapat hasil akhir.
+Coordinator menyajikan hasil dan meminta approval sebelum publikasi eksternal.
 
 ---
 
@@ -4014,9 +4251,9 @@ MVP dianggap selesai jika:
 
 ### Tools
 
-- minimal filesystem
-- shell terbatas
-- git (wajib untuk Developer Workspace/Engineer Agent; opsional untuk Non-Developer Workspace; lihat [DEC-005] W15)
+- minimal browser/search dan filesystem untuk artifact
+- tool domain tambahan dapat dikonfigurasi, misalnya spreadsheet
+- shell/Git hanya opsional untuk workspace yang memilih engineering extension
 
 ### Artifacts
 
@@ -4060,6 +4297,15 @@ MVP dianggap selesai jika:
 - live events
 - artifacts
 - approvals
+
+### General MVP End-to-End
+
+- satu request strategi konten membuat task riset pasar dan analisis penjualan yang dapat berjalan paralel
+- riset menyertakan sumber; analisis menyertakan periode, metrik, dan keterbatasan data
+- Content Creator menghasilkan draft dari artifact tersebut; Editor memberi review yang tertaut ke versi artifact
+- event dan dependency menunjukkan urutan request → delegation → artifact → review → hasil akhir
+- tool publikasi tidak dipanggil sebelum approval valid; reject tidak menghasilkan side effect; grant sekali hanya mengeksekusi aksi sekali
+- integration test menggunakan provider/tool mock dan memeriksa artifact, event, status task, approval, serta jumlah eksekusi side effect
 
 ---
 
@@ -4454,22 +4700,16 @@ Demo pertama harus sederhana tetapi terasa hidup:
 User
  |
  v
-CEO
+Coordinator
  |
- +----> Research
+ +----> Market Researcher
  |
- +----> CTO
+ +----> Sales Analyst
  |
- +----> Security
+ +----> Content Creator
           |
           v
-        CEO
-          |
-          v
-       Engineer
-          |
-          v
-       Reviewer
+        Editor
           |
           v
         Human
@@ -4480,51 +4720,49 @@ Semua aktivitas tampil real-time.
 Dashboard menampilkan:
 
 ```text
-CEO        ● Delegating
-Research   ● Researching
-CTO        ● Reviewing
-Security   ● Analyzing
-Engineer   ● Waiting
-Reviewer   ○ Idle
+Coordinator      ● Delegating
+Market Research  ● Researching
+Sales Analyst    ● Analyzing
+Content Creator  ● Drafting
+Editor           ○ Idle
 ```
 
 Live event stream:
 
 ```text
-CEO -> Research:
-"Investigate best practices for multi-agent systems."
+Coordinator -> Market Researcher:
+"Find this quarter's market and audience trends."
 
 Research:
 "Starting research."
 
-CEO -> CTO:
-"Evaluate transport architecture."
+Coordinator -> Sales Analyst:
+"Compare this month's sales with the prior period."
 
-CTO:
-"Working on architecture."
+Sales Analyst:
+"Working on the comparison and noting missing data."
 
-Research -> CEO:
-"Found 8 relevant findings."
+Market Researcher -> Coordinator:
+"Found 8 relevant findings and verified the sources."
 
-CEO -> Engineer:
-"Build minimal prototype."
+Coordinator -> Content Creator:
+"Draft a post using the approved sources and brand voice."
 
-Engineer:
-"Starting implementation."
+Content Creator:
+"Drafting for the target audience."
 ```
 
 Ketika semuanya selesai:
 
 ```text
 Decision:
-Proceed with Event Bus + WebSocket for real-time communication.
+Prepare the campaign around the strongest supported audience opportunity.
 
 Artifacts:
-research.md
-architecture.md
-security-review.md
-benchmark.md
-prototype/
+market-research.md
+sales-analysis.csv
+content-draft.md
+review.md
 ```
 
 Human tinggal memutuskan.
@@ -4545,11 +4783,11 @@ Tetapi membuat:
                      YOU
                       |
                       v
-                 SOCIETAS
+                  SOCIETAS
                       |
        +--------------+--------------+
        |              |              |
-      CEO            CTO           Research
+           Coordinator    Market Research   Sales Analyst
        |              |              |
        +--------------+--------------+
                       |
@@ -4557,7 +4795,7 @@ Tetapi membuat:
                       |
        +--------------+--------------+
        |              |              |
-     Engineer      Reviewer       Security
+           Content Creator   Editor        Custom Role
        |              |              |
        +--------------+--------------+
                       |
@@ -4668,23 +4906,23 @@ MVP wajib bisa melakukan satu flow end-to-end:
 Human
   |
   v
-CEO
+Coordinator
   |
-  +------> Research
+  +------> Market Researcher
   |
-  +------> CTO
-              |
-              v
-           Engineer
-              |
-              v
-           Reviewer
-              |
-              v
-             CEO
-              |
-              v
-            Human
+  +------> Sales Analyst
+  |             |
+  |             v
+  +------> Content Creator
+                |
+                v
+              Editor
+                |
+                v
+           Coordinator
+                |
+                v
+              Human
 ```
 
 Dengan:
@@ -4701,6 +4939,8 @@ Dengan:
 - Budget & context control (AI Control Plane)
 - Contracts tervalidasi (envelope + schema, Section 72A)
 ```
+
+Acceptance flow tidak bergantung pada Git, source repository, atau compiler. Sebelum MVP runtime tersedia, kriteria ini adalah target implementasi dan belum dapat diuji pada workspace spesifikasi ini.
 
 Jika flow ini sudah bekerja dengan stabil, project sudah mempunyai dasar produk yang kuat.
 

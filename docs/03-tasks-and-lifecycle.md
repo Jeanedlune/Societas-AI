@@ -46,13 +46,11 @@ Instruksi user diproses berjenjang sebelum task dieksekusi. Bagian ini menjelask
 
 ### 1. Intake Layer (Front-Office Sanitizer)
 
-- LLM generatif murah dan cepat (Flash tier) membaca prompt mentah user — termasuk typo dan bahasa santai — plus file dokumentasi `PROJECT_MAP.md` (pemetaan fungsi direktori 1 halaman).
-- Menghasilkan brief task terstruktur: `goal`, `target_modules`, `risk_hint`.
-- Fleksibel: jika folder/fitur belum terpetakan, fallback otomatis ke `target_path: null` dan `risk_hint: "normal"`.
+- LLM generatif murah dan cepat (Flash tier) membaca prompt mentah user — termasuk typo dan bahasa santai — serta konteks workspace yang relevan.
+- Menghasilkan brief task terstruktur: `goal`, `inputs`, `expected_output`, `constraints`, `risk_hint`.
+- Fleksibel: task dapat menunjuk sumber, kanal, periode, audiens, atau area data sesuai domain.
 
-**Maintenance `PROJECT_MAP.md` (anti-basi):** file ini **tidak boleh di-update manual** — akan basi dalam hitungan minggu dan Intake mulai salah nebak target modul. `PROJECT_MAP.md` digenerate ulang secara deterministik oleh backend Go (struktur direktori via `tree -d -L 3` + deskripsi singkat per modul) **setiap kali ada task yang berhasil di-merge ke `main`** (lihat #60.4). Generator ini berjalan sebagai task background 0 token — bukan LLM call.
-
-Untuk final-candidate approval (I17/I19, 72A.10), jalankan generator **sesudah rebase dan sebelum freeze, build gate, Semantic Rebase, atau review** agar perubahan map ikut candidate tree yang benar-benar diuji. Semantic evidence mengikat versi map dalam candidate. Setelah merge receipt terkonfirmasi, regenerasi otomatis harus menghasilkan konten identik; perbedaan masuk task perbaikan dengan rebase, gate, Semantic Rebase, review, dan approval baru, bukan commit diam-diam ke `main`. Format/sumber deskripsi per modul tetap keputusan terpisah dan wajib menjadi input candidate bila memengaruhi hasil intake.
+Konteks sumber harus memiliki pemilik dan mekanisme pembaruan yang jelas. Jangan mengasumsikan semua task bekerja pada source code atau repository. Untuk riset, konten, dan analisis bisnis, brief sebaiknya menyertakan sumber data, kanal, periode waktu, audiens, serta batasan yang relevan.
 
 ### 2. Cognitive Router (Jev AI — System 1 Decision Engine)
 
@@ -119,21 +117,21 @@ Contoh:
 
 ```text
 TASK-001
-Research transport options
+Research target market
     |
     +---- TASK-002
-    |     Compare protocols
+   |     Compare competitors
     |
     +---- TASK-003
-          Analyze architecture
+          Analyze sales data
               |
               v
           TASK-004
-          CTO Review
+          Editor Review
               |
               v
           TASK-005
-          Engineering POC
+          Prepare content brief
 ```
 
 Task dapat berjalan:
@@ -154,24 +152,24 @@ Contoh:
 
 ```text
 CEO:
-"Investigate whether gRPC is suitable
-for real-time agent communication."
+"Prepare a content strategy using market trends
+and this month's sales performance."
 ```
 
 CEO membuat:
 
 ```text
-TASK-101 -> Research
-TASK-102 -> CTO
-TASK-103 -> Security
+TASK-101 -> Market Researcher
+TASK-102 -> Sales Analyst
+TASK-103 -> Content Creator
 ```
 
 Setelah selesai:
 
 ```text
-Research  ──┐
-CTO        ──┼──> CEO
-Security   ──┘
+Market Research ──┐
+Sales Analysis  ──┼──> Coordinator
+Content Draft   ──┘
 ```
 
 CEO kemudian membuat keputusan.

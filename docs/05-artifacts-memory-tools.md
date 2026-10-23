@@ -15,20 +15,17 @@ research.md
 architecture.md
 benchmark.json
 diagram.svg
-decision.md
-patch.diff
-pull-request.md
 test-report.md
+content-draft.md
+market-research.md
+sales-analysis.csv
+decision.md
+review.md
 ```
 
-## 17.1 Contract-First Integration (Generate-First, Gate-Second, Prompt-Last)
+## 17.1 Domain Context and Integrations
 
-Agen dilarang menulis fungsi fetch/call Web3 atau API dari nol secara manual. Alur serah terima backend/smart contract ke frontend:
-
-1. **Pinning Kontrak:** task frontend wajib mengunci `contract_hash` (SHA256 dari OpenAPI spec / Contract ABI). Jika spec berubah, Orchestrator menerbitkan `task.contract_changed` (`phase: invalidated`) dan menetapkan `contract_status: stale` — freshness terpisah dari status eksekusi. Dispatch/resume, review, approval, dan completion ditahan sampai re-pin + codegen terhadap spec terbaru; gate/review/approval lama tidak valid. Re-pin sukses direkam sebagai `phase: repinned`; task terminal tidak dibuka kembali. Lifecycle kanonik di 72A.6/72A.8.
-2. **Codegen Otomatis:** Go runtime men-generate client TypeScript/Rust binding via CLI tool (`orval`, `wagmi` typegen, `viem`) sebelum agen bekerja.
-3. **Strict Usage:** agen hanya boleh mengimpor dan memanggil fungsi hasil generate tersebut.
-4. **Token-Saver Lookup:** agen tidak menerima seluruh spec OpenAPI/ABI ke prompt. Disediakan tool deterministik `contract.lookup(operation_id)` yang mengembalikan potongan spec relevan saja — tanpa vector search.
+Task dapat mengikat versi sumber, brief, schema, atau dataset yang relevan agar review dan approval memeriksa input yang sama. Integrasi API/schema yang membutuhkan code generation merupakan profile opsional untuk workspace terkait; workflow engineering lama bukan requirement MVP.
 
 Artifact memiliki:
 
@@ -48,31 +45,19 @@ Artifact memiliki:
 # 18. Artifact Flow
 
 ```text
-Research Agent
+Specialist Agents
       |
       v
-research.md
+research.md / content-draft.md / sales-analysis.csv
       |
       v
-CEO
+Coordinator
       |
       v
-architecture task
+review task
       |
       v
-CTO
-      |
-      v
-architecture.md
-      |
-      v
-Engineer
-      |
-      v
-code + tests
-      |
-      v
-Reviewer
+Editor / domain reviewer
       |
       v
 review.md
@@ -94,10 +79,10 @@ Informasi khusus agent.
 Contoh:
 
 ```text
-CTO preferences
-Engineering decisions
-Technical context
-Past reviews
+Content Creator preferences
+Brand voice and approved claims
+Market research findings
+Past review feedback
 ```
 
 ## 19.2 Workspace Memory
@@ -107,10 +92,10 @@ Informasi seluruh organisasi.
 Contoh:
 
 ```text
-Architecture decisions
-Project direction
+Business goals
+Product direction
 Company rules
-Important findings
+Approved sources and definitions
 ```
 
 ## 19.3 Task Memory
@@ -133,34 +118,34 @@ Retrieval semantik selalu melewati Vector DB dan mengembalikan ID referensi ([5A
 
 ## 19.6 Memory Curation (Anti Semantic Drift / Zombie Memory)
 
-Vector DB bekerja berdasarkan kemiripan teks (cosine similarity), **bukan status kebenaran atau recency**. Ia tidak tahu dokumen mana yang sudah basi — `architecture_v1.md` (nullifier 2 status) dan `nullifier_v2.md` (4 status) bisa sama-sama ter-retrieve karena kemiripannya hampir sama, sehingga agen menerima dua fakta kontradiktif dan bisa "ketularan" keputusan lama yang sudah dibatalkan. Semakin tua proyek, makin banyak zombie memory: keputusan dibatalkan, bug log yang sudah di-patch, nama fungsi yang sudah deprecated.
+Vector DB bekerja berdasarkan kemiripan teks (cosine similarity), **bukan status kebenaran atau recency**. Dokumen lama dan baru dengan topik serupa bisa sama-sama ter-retrieve sehingga agen menerima fakta yang sudah bertentangan. Semakin lama workspace berjalan, makin banyak memory yang usang atau sudah diganti.
 
 Lima aturan kurasi deterministik di Go + SQLite — tanpa algoritma AI tambahan:
 
-1. **Filter pintu masuk — jangan embed semua hal.** Keputusan/spec hanya boleh di-embed setelah human approval untuk versi yang terikat, Semantic Rebase `PASS` (#60.4), dan merge receipt resmi ke `main` terkonfirmasi (I19). Approval abstrak atau Git rebase bersih saja tidak cukup. Dokumentasi final harus berasal dari kode yang sudah merge. Chat/debat/transkrip arbitrase, keputusan kandidat belum merge, log error/test gagal, draft, proposal kalah, dan putusan lead yang belum lolos pipeline dilarang di-embed.
+1. **Filter pintu masuk — jangan embed semua hal.** Memory hanya boleh di-embed setelah sumber dan versi yang relevan jelas serta admission policy workspace terpenuhi. Chat/debat/transkrip, data sensitif, output tanpa sumber, draft yang belum disetujui, dan proposal yang ditolak tidak otomatis masuk ke Vector DB.
 2. **Pola Supersede (tombstone di SQLite).** Tabel `artifacts` memiliki kolom `superseded_by` (ID artifact pengganti). Saat keputusan baru menggantikan yang lama, record lama ditandai — bukan dihapus. Setiap ID hasil retrieval Vector DB wajib di-filter ulang ke SQLite: `superseded_by != NULL -> skip`. Dokumen basi tidak pernah masuk context LLM lagi.
 3. **Time-decay scoring.** Skor akhir retrieval = `vector_similarity x faktor_umur` (mis. dokumen minggu ini x1.0, 3 bulan x0.5), dihitung deterministik di Go — dokumen lama yang kebetulan mirip kalah dari dokumen baru yang relevan.
-4. **Ikat memori ke git commit / path.** Setiap entry memori menyimpan metadata `source_path` (mis. `crates/storage/src/nullifier.rs`) dan commit hash. Background GC mengecek via git: jika file/fungsi sudah dihapus atau di-rename di `main`, memori ditandai `stale` dan dibersihkan dari Vector DB.
-5. **Semantic admission guard.** Sebelum embedding, Go mencocokkan approval ID/hash dan snapshot version, semantic evidence version/checksum, serta merge receipt terkonfirmasi. Ketiganya harus mengikat workspace/run/task, base/candidate commit/tree, recipe/policy, dan decision artifact versions/checksums yang sama. Periksa status/tombstone/freshness di SQLite; saat conflict, inconclusive, approval pending, atau receipt belum direkonsiliasi, simpan artifact di Operational Store/quarantine saja. `task.completed`, ringkasan LLM, atau verdict lead bukan merge receipt dan agent tidak dapat memberi flag `passed` sendiri.
+4. **Ikat memori ke sumber.** Setiap entry menyimpan metadata source ID, versi/checksum, scope, dan waktu. Background curation menandai memory stale saat sumber diganti, dihapus, atau melewati freshness policy.
+5. **Admission guard.** Sebelum embedding, periksa approval dan versi sumber yang tepat, status/tombstone, sensitivitas, serta freshness di SQLite. Jika sumber berubah atau statusnya belum jelas, simpan artifact di Operational Store saja sampai direview ulang.
 
 ### Penyimpanan Batasan Negatif (Anti-Pattern)
 
-Keputusan atau proposal arsitektur yang didebat lalu ditolak (misal via `decision.md` hasil arbitrase atau penolakan human) **tidak dibuang**. Ringkasan kondisi batasannya diekstraksi ke Vector DB (Cognitive Store) dengan:
+Keputusan atau proposal yang ditolak **tidak dibuang**. Ringkasan kondisi batasannya dapat disimpan ke Vector DB (Cognitive Store) dengan:
 
 - Metadata `cognitive_guardrail: true` — menandai entry sebagai batasan validasi, bukan contoh untuk ditiru
 - Tag `anti-pattern` — membedakan dari best practice yang boleh diikuti
 - Ringkasan fokus pada **alasan penolakan** dan **kondisi yang menyebabkan kegagalan**, bukan implementasi detail yang salah
 
 Contoh anti-pattern yang disimpan:
-- Arsitektur yang menembus adapter boundary (ditolak karena violation)
-- Kontrak API yang tidak versioning (ditolak karena breaking change risk)
-- Pola concurrency yang menyebabkan race condition (ditolak karena deadlock evidence)
+- Klaim tanpa sumber yang dapat diverifikasi
+- Materi yang tidak sesuai audiens atau brand policy
+- Analisis yang mencampur periode atau definisi metrik berbeda
 
 Anti-pattern ini tetap di-retrieval saat ada konteks serupa, tetapi **diisolasi secara struktural** di prompt LLM (lihat 5A.4) agar model memperlakukannya sebagai penalti/filter validasi akhir, bukan contoh kode yang harus ditiru.
 
 Prinsip: Vector DB adalah **perpustakaan buku yang sudah lulus kurasi** — bukan tempat sampah. Edisi lama ditarik dari rak saat revisi terbit.
 
-Semantic triage mengambil exact-version Git/SQLite/artifact sebagai input; dilarang mengambil proposal dari Vector DB atau memakai similarity untuk menghidupkan zombie memory. Setelah replacement valid admitted, tombstone/supersede menarik versi lama lewat mekanisme existing. Non-Git admission dijelaskan di [DEC-005] W15. Provenance fingerprint/freshness lintas source dijelaskan di [DEC-006] W11/W12.
+Semantic triage memakai sumber dan versi artifact yang tepat; dilarang memakai similarity sebagai pengganti bukti. Setelah replacement valid admitted, tombstone/supersede menarik versi lama lewat mekanisme existing. Provenance fingerprint/freshness lintas source dijelaskan di [DEC-005] W15 dan [DEC-006] W11/W12.
 
 ---
 
@@ -174,7 +159,7 @@ Memory harus memiliki:
 - scope
 - owner
 
-Jangan memasukkan semua chat ke memory secara otomatis — hanya keputusan/spec ter-approve + semantic pass + merge receipt terkonfirmasi yang boleh di-embed (#19.6).
+Jangan memasukkan semua chat ke memory secara otomatis — hanya artifact dengan sumber, versi, dan status admission yang tervalidasi yang boleh di-embed (#19.6).
 
 Memory harus memiliki lifecycle.
 
@@ -207,7 +192,6 @@ Contoh:
 ```text
 filesystem
 shell
-git
 browser
 search
 http
@@ -236,6 +220,6 @@ Field yang tidak diisi berarti `false`. Untuk tool non-idempotent dengan `operat
 
 ## 21.1 Tool Interface — MCP Client
 
-Antarmuka tool agen menggunakan arsitektur **MCP Client**: Tool Runtime di backend Go bertindak sebagai client yang terhubung ke MCP server internal maupun eksternal (filesystem, shell, git, search, dst). Tool baru ditambahkan dengan mendaftarkan server MCP — bukan mengubah kode agen. Permission tetap di-gate deterministik oleh Policy Engine (#22) sebelum call diteruskan ke MCP server.
+Antarmuka tool agen menggunakan arsitektur **MCP Client**: Tool Runtime bertindak sebagai client yang terhubung ke MCP server internal maupun eksternal (browser, search, spreadsheet, filesystem, dan lainnya). Tool baru ditambahkan dengan mendaftarkan server MCP — bukan mengubah kode agen. Permission tetap di-gate deterministik oleh Policy Engine (#22) sebelum call diteruskan ke MCP server.
 
 ---
