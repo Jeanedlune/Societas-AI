@@ -25,8 +25,8 @@ func TestOpenMigratesCoreSchemaAndEnablesPragmas(t *testing.T) {
 	if err := db.QueryRowContext(ctx, "PRAGMA user_version").Scan(&version); err != nil {
 		t.Fatal(err)
 	}
-	if version != 2 {
-		t.Fatalf("schema version = %d, want 2", version)
+	if version != 3 {
+		t.Fatalf("schema version = %d, want 3", version)
 	}
 	for _, table := range []string{
 		"workspaces", "agents", "runs", "tasks", "events", "messages",
@@ -72,8 +72,8 @@ func TestOpenMigratesCoreSchemaAndEnablesPragmas(t *testing.T) {
 	if err := db.QueryRowContext(ctx, "SELECT count(*) FROM schema_migrations").Scan(&history); err != nil {
 		t.Fatal(err)
 	}
-	if history != 2 {
-		t.Fatalf("migration history has %d rows, want 2", history)
+	if history != 3 {
+		t.Fatalf("migration history has %d rows, want 3", history)
 	}
 }
 
@@ -109,8 +109,8 @@ func TestUpgradeFromPreviousMigrationIsDeterministic(t *testing.T) {
 	if err := db.QueryRowContext(ctx, "PRAGMA user_version").Scan(&version); err != nil {
 		t.Fatal(err)
 	}
-	if version != 2 {
-		t.Fatalf("upgraded schema version = %d, want 2", version)
+	if version != 3 {
+		t.Fatalf("upgraded schema version = %d, want 3", version)
 	}
 }
 
@@ -122,7 +122,7 @@ func TestFailedMigrationRollsBackDDLAndVersion(t *testing.T) {
 	}
 	defer db.Close()
 
-	bad := migration{version: 3, name: "broken", sql: "CREATE TABLE rollback_probe(id INTEGER); CREATE TABLE workspaces(id INTEGER);"}
+	bad := migration{version: 4, name: "broken", sql: "CREATE TABLE rollback_probe(id INTEGER); CREATE TABLE workspaces(id INTEGER);"}
 	if err := applyMigration(ctx, db, bad); err == nil {
 		t.Fatal("expected migration to fail")
 	}
@@ -136,11 +136,11 @@ func TestFailedMigrationRollsBackDDLAndVersion(t *testing.T) {
 	if err := db.QueryRowContext(ctx, "PRAGMA user_version").Scan(&version); err != nil {
 		t.Fatal(err)
 	}
-	if version != 2 {
-		t.Fatalf("schema version after rollback = %d, want 2", version)
+	if version != 3 {
+		t.Fatalf("schema version after rollback = %d, want 3", version)
 	}
 	var history int
-	if err := db.QueryRowContext(ctx, "SELECT count(*) FROM schema_migrations WHERE version=3").Scan(&history); err != nil {
+	if err := db.QueryRowContext(ctx, "SELECT count(*) FROM schema_migrations WHERE version=4").Scan(&history); err != nil {
 		t.Fatal(err)
 	}
 	if history != 0 {

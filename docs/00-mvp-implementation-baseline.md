@@ -28,7 +28,8 @@ Dokumen ini mencatat keputusan fondasi dari [Task-001](../tasks/Task-001.md). Ke
 
 - Package `internal/storage/sqlite` membuka database lokal dan menerapkan migration SQL embedded. `PRAGMA user_version` dan tabel `schema_migrations` menyimpan versi, nama, serta checksum SHA-256. Tiap migration beserta catatan versinya commit dalam satu transaksi; perubahan file migration yang sudah diterapkan ditolak.
 - `Open` mengaktifkan foreign keys dan WAL, memakai `synchronous=FULL` untuk database file serta busy timeout 5 detik. `WithTx` mengembalikan error callback/commit apa adanya dengan wrapping; caller wajib memperlakukan hasil busy sebagai gagal dan dapat mencoba ulang operasi database setelah lock dilepas.
-- Migration 0001 menyiapkan operational tables dan index inti; migration 0002 menambahkan budget ledger/reservation lease dari Doc 10 §72A.17. Artifact file tetap di filesystem; SQLite menyimpan metadata dan relative path.
+- Migration 0001 menyiapkan operational tables dan index inti; migration 0002 menambahkan budget ledger/reservation lease dari Doc 10 §72A.17; migration 0003 menyelaraskan idempotency key ke scope workspace/run. Artifact file tetap di filesystem; SQLite menyimpan metadata dan relative path.
+- Event Store (`internal/eventstore`) hanya mengembalikan hasil append sesudah commit, menetapkan sequence per workspace/run, dan mengembalikan record lama untuk duplicate ID/key. Event rows dilindungi dari update/delete oleh SQLite trigger.
 
 ### Fakta dari spesifikasi aktif
 

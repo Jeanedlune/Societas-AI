@@ -182,6 +182,8 @@ func splitStatements(script string) ([]string, error) {
 	start := 0
 	var quote byte
 	lineComment, blockComment := false, false
+	triggerBody := false
+	lastKeyword := ""
 	for index := 0; index < len(script); index++ {
 		current := script[index]
 		next := byte(0)
@@ -225,23 +227,57 @@ func splitStatements(script string) ([]string, error) {
 			index++
 			continue
 		}
+		if isSQLWordStart(current) {
+			end := index + 1
+			for end < len(script) && isSQLWord(script[end]) {
+				end++
+			}
+			word := strings.ToUpper(script[index:end])
+			prefix := strings.ToUpper(strings.TrimSpace(script[start:index]))
+			if word == "BEGIN" && strings.HasPrefix(prefix, "CREATE TRIGGER ") {
+				triggerBody = true
+			}
+			if triggerBody {
+				if word == "END" {
+					lastKeyword = word
+				} else {
+					lastKeyword = ""
+				}
+			}
+			index = end - 1
+			continue
+		}
 		switch current {
 		case '\'', '"', '`':
 			quote = current
 		case '[':
 			quote = ']'
 		case ';':
+			if triggerBody && lastKeyword != "END" {
+				lastKeyword = ""
+				continue
+			}
 			if statement := strings.TrimSpace(script[start:index]); statement != "" {
 				statements = append(statements, statement)
 			}
 			start = index + 1
+			triggerBody = false
+			lastKeyword = ""
 		}
 	}
-	if quote != 0 || blockComment {
-		return nil, fmt.Errorf("migration contains an unterminated quote or comment")
+	if quote != 0 || blockComment || triggerBody {
+		return nil, fmt.Errorf("migration contains an unterminated quote, comment, or trigger")
 	}
 	if statement := strings.TrimSpace(script[start:]); statement != "" {
 		statements = append(statements, statement)
 	}
 	return statements, nil
+}
+
+func isSQLWordStart(value byte) bool {
+	return value == '_' || value >= 'a' && value <= 'z' || value >= 'A' && value <= 'Z'
+}
+
+func isSQLWord(value byte) bool {
+	return isSQLWordStart(value) || value >= '0' && value <= '9'
 }
