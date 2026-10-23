@@ -25,8 +25,8 @@ func TestOpenMigratesCoreSchemaAndEnablesPragmas(t *testing.T) {
 	if err := db.QueryRowContext(ctx, "PRAGMA user_version").Scan(&version); err != nil {
 		t.Fatal(err)
 	}
-	if version != 4 {
-		t.Fatalf("schema version = %d, want 4", version)
+	if version != 5 {
+		t.Fatalf("schema version = %d, want 5", version)
 	}
 	for _, table := range []string{
 		"workspaces", "agents", "runs", "tasks", "events", "messages",
@@ -72,8 +72,8 @@ func TestOpenMigratesCoreSchemaAndEnablesPragmas(t *testing.T) {
 	if err := db.QueryRowContext(ctx, "SELECT count(*) FROM schema_migrations").Scan(&history); err != nil {
 		t.Fatal(err)
 	}
-	if history != 4 {
-		t.Fatalf("migration history has %d rows, want 4", history)
+	if history != 5 {
+		t.Fatalf("migration history has %d rows, want 5", history)
 	}
 }
 
@@ -109,8 +109,8 @@ func TestUpgradeFromPreviousMigrationIsDeterministic(t *testing.T) {
 	if err := db.QueryRowContext(ctx, "PRAGMA user_version").Scan(&version); err != nil {
 		t.Fatal(err)
 	}
-	if version != 4 {
-		t.Fatalf("upgraded schema version = %d, want 4", version)
+	if version != 5 {
+		t.Fatalf("upgraded schema version = %d, want 5", version)
 	}
 }
 
@@ -122,7 +122,7 @@ func TestFailedMigrationRollsBackDDLAndVersion(t *testing.T) {
 	}
 	defer db.Close()
 
-	bad := migration{version: 5, name: "broken", sql: "CREATE TABLE rollback_probe(id INTEGER); CREATE TABLE workspaces(id INTEGER);"}
+	bad := migration{version: 6, name: "broken", sql: "CREATE TABLE rollback_probe(id INTEGER); CREATE TABLE workspaces(id INTEGER);"}
 	if err := applyMigration(ctx, db, bad); err == nil {
 		t.Fatal("expected migration to fail")
 	}
@@ -136,11 +136,11 @@ func TestFailedMigrationRollsBackDDLAndVersion(t *testing.T) {
 	if err := db.QueryRowContext(ctx, "PRAGMA user_version").Scan(&version); err != nil {
 		t.Fatal(err)
 	}
-	if version != 4 {
-		t.Fatalf("schema version after rollback = %d, want 4", version)
+	if version != 5 {
+		t.Fatalf("schema version after rollback = %d, want 5", version)
 	}
 	var history int
-	if err := db.QueryRowContext(ctx, "SELECT count(*) FROM schema_migrations WHERE version=5").Scan(&history); err != nil {
+	if err := db.QueryRowContext(ctx, "SELECT count(*) FROM schema_migrations WHERE version=6").Scan(&history); err != nil {
 		t.Fatal(err)
 	}
 	if history != 0 {
@@ -182,6 +182,18 @@ func TestForeignKeysAndTaskStatusConstraints(t *testing.T) {
 	}
 	if _, err := db.ExecContext(ctx, `INSERT INTO tasks(workspace_id, run_id, task_id, title, status) VALUES ('ws_demo', 'RUN-001', 'TASK-002', 'Bad', 'BLOCKED')`); err == nil {
 		t.Fatal("non-canonical task status was accepted")
+	}
+	if _, err := db.ExecContext(ctx, `UPDATE budget_ledger SET amount_tokens=amount_tokens WHERE ledger_id='led_1'`); err == nil {
+		t.Fatal("budget ledger update was accepted")
+	}
+	if _, err := db.ExecContext(ctx, `DELETE FROM budget_ledger WHERE ledger_id='led_1'`); err == nil {
+		t.Fatal("budget ledger delete was accepted")
+	}
+	for _, table := range []string{"summaries"} {
+		var count int
+		if err := db.QueryRowContext(ctx, `SELECT count(*) FROM sqlite_master WHERE type='table' AND name=?`, table).Scan(&count); err != nil || count != 1 {
+			t.Fatalf("table %q found=%d err=%v", table, count, err)
+		}
 	}
 }
 

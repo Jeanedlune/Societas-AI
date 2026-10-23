@@ -20,3 +20,10 @@ Implementasikan ledger append-only, reservation leases, settlement transaction, 
 
 ## Handoff
 Semua operasi ledger harus idempotent pada reservation ID.
+
+## Hasil
+
+- Implementasi `internal/budget` menyediakan grant, reserve atomik dengan TTL lease, settle/refund, recovery lease kedaluwarsa, saldo scope, dan rekonstruksi saldo dari ledger.
+- Recovery dapat menerima `RecoveryEventAppender`; event `budget.settled` dipersist bersama refund dan perubahan lease di transaksi SQLite yang sama. Runtime wajib menghubungkan appender ke Event Store.
+- Migration 0005 membuat ledger append-only melalui trigger update/delete. Tes menutup retry/crash recovery, event rollback atomik, oversubscription paralel, rekonstruksi saldo, dan immutability.
+- Verifikasi: `go test ./internal/budget ./internal/storage/sqlite` lulus.

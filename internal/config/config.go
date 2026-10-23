@@ -90,8 +90,13 @@ type BudgetConfig struct {
 }
 
 type ToolCapabilityConfig struct {
-	Idempotent           bool `yaml:"idempotent"`
-	OperationKeyEnforced bool `yaml:"operation_key_enforced"`
+	Idempotent           bool           `yaml:"idempotent"`
+	OperationKeyEnforced bool           `yaml:"operation_key_enforced"`
+	InputSchema          map[string]any `yaml:"input_schema"`
+	OutputSchema         map[string]any `yaml:"output_schema"`
+	TimeoutMS            int64          `yaml:"timeout_ms"`
+	ResourceScope        []string       `yaml:"resource_scope"`
+	RequiredPermissions  []string       `yaml:"required_permissions"`
 }
 
 type ToolchainConfig struct {
@@ -375,6 +380,31 @@ func (c Config) Validate() error {
 	for _, capability := range sortedKeys(c.ToolCapabilities) {
 		if !capabilityPattern.MatchString(capability) {
 			return fieldError("tool_capabilities."+capability, "capability ID must be a lowercase dotted name")
+		}
+		definition := c.ToolCapabilities[capability]
+		path := "tool_capabilities." + capability
+		if definition.TimeoutMS < 0 || definition.TimeoutMS > 3_600_000 {
+			return fieldError(path+".timeout_ms", "must be between 0 and 3600000")
+		}
+		seenScopes := map[string]bool{}
+		for index, scope := range definition.ResourceScope {
+			if scope != "workspace" && scope != "run" && scope != "task" && scope != "agent" && scope != "tool" {
+				return fieldError(fmt.Sprintf("%s.resource_scope[%d]", path, index), "must be workspace, run, task, agent, or tool")
+			}
+			if seenScopes[scope] {
+				return fieldError(path+".resource_scope", "contains a duplicate scope")
+			}
+			seenScopes[scope] = true
+		}
+		seenPermissions := map[string]bool{}
+		for index, permission := range definition.RequiredPermissions {
+			if strings.TrimSpace(permission) == "" {
+				return fieldError(fmt.Sprintf("%s.required_permissions[%d]", path, index), "must not be empty")
+			}
+			if seenPermissions[permission] {
+				return fieldError(path+".required_permissions", "contains a duplicate permission")
+			}
+			seenPermissions[permission] = true
 		}
 	}
 	for _, id := range sortedKeys(c.Providers) {

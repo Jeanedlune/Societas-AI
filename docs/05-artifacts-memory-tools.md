@@ -116,6 +116,10 @@ Setiap level memory di atas di-map ke pilar penyimpanan:
 
 Retrieval semantik selalu melewati Vector DB dan mengembalikan ID referensi ([5A.25 — Semantic Retrieval](02-ai-control-plane.md#5a25-semantic-retrieval)) — bukan pencarian teks mentah di SQLite.
 
+### 19.7 Runtime MVP: admission dan adapter
+
+Operational metadata memory selalu tinggal di SQLite. Runtime MVP menyediakan interface `VectorStore`; tidak memilih atau mengunci produk vector database. Admission gagal tertutup jika adapter belum dipasang, dan hasil pencarian adapter harus diverifikasi ulang terhadap status, scope, owner, freshness, checksum sumber, serta supersede state di SQLite. Pemasangan provider embedding/vector adalah keputusan deployment berikutnya; chat dan data sensitif tidak di-embed otomatis.
+
 ## 19.6 Memory Curation (Anti Semantic Drift / Zombie Memory)
 
 Vector DB bekerja berdasarkan kemiripan teks (cosine similarity), **bukan status kebenaran atau recency**. Dokumen lama dan baru dengan topik serupa bisa sama-sama ter-retrieve sehingga agen menerima fakta yang sudah bertentangan. Semakin lama workspace berjalan, makin banyak memory yang usang atau sudah diganti.
@@ -221,5 +225,9 @@ Field yang tidak diisi berarti `false`. Untuk tool non-idempotent dengan `operat
 ## 21.1 Tool Interface — MCP Client
 
 Antarmuka tool agen menggunakan arsitektur **MCP Client**: Tool Runtime bertindak sebagai client yang terhubung ke MCP server internal maupun eksternal (browser, search, spreadsheet, filesystem, dan lainnya). Tool baru ditambahkan dengan mendaftarkan server MCP — bukan mengubah kode agen. Permission tetap di-gate deterministik oleh Policy Engine (#22) sebelum call diteruskan ke MCP server.
+
+## 21.2 Capability Registry MVP
+
+Implementasi registry MVP membaca kontrak capability dari konfigurasi workspace yang dipercaya: JSON Schema input/output, timeout, resource scope, permission, idempotency, dan dukungan operation key. Schema remote `$ref` ditolak agar validasi tidak mengambil resource jaringan saat startup. Capability yang tidak terdaftar ditolak. Idempotency hanya dapat menyatakan kontrak provider yang nyata; operation key saja tidak cukup untuk mengizinkan retry tanpa jaminan deduplikasi provider. Registry ini memvalidasi dan membatasi call, sementara konektor MCP browser/search, spreadsheet, dan artifact files ditambahkan oleh task implementasi tools.
 
 ---

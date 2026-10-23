@@ -20,3 +20,10 @@ Implementasikan source ordering, relevance selection, token estimate, stale filt
 
 ## Handoff
 Jangan memasukkan seluruh transcript ke semua agent.
+
+## Hasil
+
+- `internal/contextmgr.Build` merakit item deterministik sesuai prioritas, required status, relevance, dan budget; setiap item terpilih membawa ref, estimasi token, dan alasan.
+- Memory/artifact yang stale, superseded, atau untrusted dikeluarkan. Memory historis dan cognitive guardrail dirender dalam blok terpisah dengan escaping.
+- Pemanggil memberi kandidat terpilih (termasuk referensi summary/artifact); manager tidak membaca seluruh event transcript atau melakukan retrieval tersembunyi. Counter konservatif bytes/3 menjadi fallback sampai tokenizer provider dipasang.
+- Tes mencakup overflow, provenance, filtering, guardrail, dan hasil deterministik. Verifikasi: `go test ./internal/contextmgr` lulus.

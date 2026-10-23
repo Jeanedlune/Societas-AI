@@ -20,3 +20,9 @@ Implementasikan summary generation, source artifact references, token estimate, 
 
 ## Handoff
 Tidak ada ringkasan LLM yang dianggap approval atau fakta terverifikasi otomatis.
+
+## Hasil
+
+- `internal/summarizer` membaca versi artifact tertentu, meminta JSON terstruktur berisi text/findings/risks/recommendation/sources, lalu menyimpan summary yang terikat ke artifact ID/version dan estimasi token.
+- Output invalid, melebihi batas, atau sumber yang berubah saat generasi tidak disimpan. Summary tidak mengubah artifact dan tidak menghasilkan approval/verifikasi.
+- Tes memverifikasi source binding, batas output, JSON invalid, dan kegagalan provider. Verifikasi: `go test ./internal/summarizer` lulus.

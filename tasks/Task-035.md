@@ -20,3 +20,10 @@ Implementasikan operational metadata, optional vector adapter, embed/retrieve in
 
 ## Handoff
 Jangan embed seluruh chat atau data sensitif secara otomatis.
+
+## Hasil
+
+- `internal/memory` menyimpan kandidat di SQLite dengan scope/owner, source artifact version/checksum, confidence, freshness, sensitivity, tag, dan supersede status.
+- Hanya sumber artifact fresh yang terkait task `completed` dengan `result_status: success`, tidak sensitif, dan lolos policy yang dapat diteruskan ke vector adapter. Retrieval vector selalu diverifikasi ulang ke SQLite.
+- Adapter vector adalah interface opsional; belum ada vendor/vector database bawaan. Admission gagal tertutup saat adapter tidak tersedia. Ini menjaga jalur provider tetap bisa dipilih kemudian tanpa mengirim chat atau data sensitif otomatis.
+- Tes mencakup admission, isolasi scope, source freshness, supersede, sensitivitas, dan task belum sukses. Verifikasi: `go test ./internal/memory` lulus.

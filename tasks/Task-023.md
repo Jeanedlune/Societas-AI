@@ -20,3 +20,10 @@ Implementasikan content store, metadata, versioning, checksums, access scope, an
 
 ## Handoff
 Path fisik storage tidak bocor sebagai asumsi client API.
+
+## Hasil
+
+- `internal/artifacts` menyimpan konten privat per workspace/ID/versi dan metadata di SQLite; event artifact divalidasi dan ditulis dalam transaksi yang sama.
+- Update menggunakan compare-and-swap versi baru; versi sebelumnya ditandai stale/superseded. Read memeriksa requester, ukuran, checksum, dan referensi sumber.
+- API tidak mengembalikan path fisik. Konten ditulis melalui file sementara lalu rename; crash sesudah rename sebelum commit dapat meninggalkan file yatim yang dapat dibersihkan oleh GC mendatang.
+- Tes mencakup izin, versioning, retry idempotent, traversal path, ketidakcocokan event, dan integritas konten. Verifikasi: `go test ./internal/artifacts` lulus.

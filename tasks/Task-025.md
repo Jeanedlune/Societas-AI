@@ -20,3 +20,10 @@ Catat schema input/output, idempotency, operation key support, timeout, resource
 
 ## Handoff
 Tool catalog awal MVP fokus pada browser/search, spreadsheet, dan artifact files.
+
+## Hasil
+
+- `workspace.yaml` menerima schema input/output, timeout, resource scope, permission, idempotency, dan operation-key guarantee sebagai konfigurasi tepercaya.
+- `internal/toolcap` membangun registry default-deny, compile JSON Schema lokal, memblokir remote `$ref`, memvalidasi request/response, membatasi timeout, dan memeriksa permission sebelum handler dipanggil.
+- Retry hanya aman untuk capability idempotent atau operation key yang ditegakkan capability dan dijamin deduplicate oleh provider. Handler tool browser/spreadsheet/files belum dibuat; ini kontrak/runtime registry untuk Task 026–028.
+- Tes mencakup schema valid/invalid, unknown capability, permission, output, timeout, dan retry safety. Verifikasi: `go test ./internal/toolcap ./internal/config` lulus.

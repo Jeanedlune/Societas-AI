@@ -34,6 +34,13 @@ internal/storage/sqlite/ migrations transactional dan operational database lokal
 internal/eventstore/   append-only validated event persistence dan replay
 internal/server/      HTTP health endpoint dan lifecycle
 internal/config/      loader, defaults, dan validator workspace config
+internal/budget/      append-only ledger, reservation lease, settle, recovery
+internal/artifacts/   content store berversi, metadata, checksum, event binding
+internal/memory/      structured memory, source guard, optional vector adapter
+internal/contextmgr/  bounded context assembly dengan provenance
+internal/summarizer/ summary artifact-bound dengan output JSON tervalidasi
+internal/toolcap/     default-deny capability registry dan schema/timeout checks
+internal/ids/         pembuat identifier berbasis ULID dengan prefix domain
 config/               contoh workspace.yaml tanpa secret
 tools/audit/          validator spesifikasi dan regression tests
 tools/contracts/      ekstraksi schema kanonik dan code generation
