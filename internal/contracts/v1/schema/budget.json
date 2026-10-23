@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:societas:1:budget",
+  "title": "Budget",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "max_input_tokens": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "max_output_tokens": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "max_total_tokens": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "max_model_calls": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "max_tool_calls": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "max_agent_messages": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "max_time_seconds": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "max_cost_usd": {
+      "type": "number",
+      "minimum": 0
+    },
+    "max_parallel_agents": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "max_child_tasks": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "max_depth": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "max_agent_iterations": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "max_task_iterations": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "max_rebuttals": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "batas putaran sanggahan per task (#48); counter disimpan di SQLite dan bertahan atas retry/restart"
+    },
+    "retry": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "max_attempts": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "max_total_retry_cost_usd": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

@@ -24,10 +24,12 @@ Jalankan smoke test lifecycle dan endpoint dengan `go test ./...`.
 ```text
 cmd/societas/         entrypoint server
 internal/agent/       immutable per-run agent registry
+internal/contracts/v1/ versioned envelope, payload models, schemas, dan event registry
 internal/server/      HTTP health endpoint dan lifecycle
 internal/config/      loader, defaults, dan validator workspace config
 config/               contoh workspace.yaml tanpa secret
 tools/audit/          validator spesifikasi dan regression tests
+tools/contracts/      ekstraksi schema kanonik dan code generation
 docs/                 spesifikasi produk aktif
 tasks/                backlog implementasi
 archive/              spesifikasi historis

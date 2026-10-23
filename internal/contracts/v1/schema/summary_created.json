@@ -1,0 +1,14 @@
+{
+  "$id": "urn:societas:1:summary_created",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "summary"
+  ],
+  "properties": {
+    "summary": {
+      "$ref": "urn:societas:1:summary"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

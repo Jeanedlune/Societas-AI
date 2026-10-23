@@ -1,0 +1,101 @@
+{
+  "$id": "urn:societas:1:task_semantic_conflict",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "outcome",
+    "semantic_evidence",
+    "blocked_evidence",
+    "decision_refs",
+    "conflict_summary",
+    "escalation_lead"
+  ],
+  "properties": {
+    "outcome": {
+      "enum": [
+        "conflict",
+        "inconclusive"
+      ]
+    },
+    "semantic_evidence": {
+      "$ref": "urn:societas:1:approval_snapshot#/$defs/artifact_version"
+    },
+    "blocked_evidence": {
+      "$ref": "urn:societas:1:approval_snapshot#/$defs/artifact_version"
+    },
+    "decision_refs": {
+      "type": "array",
+      "minItems": 2,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "role",
+          "artifact_ref"
+        ],
+        "properties": {
+          "role": {
+            "enum": [
+              "base",
+              "candidate"
+            ]
+          },
+          "artifact_ref": {
+            "$ref": "urn:societas:1:approval_snapshot#/$defs/artifact_version"
+          }
+        }
+      }
+    },
+    "conflict_summary": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "escalation_lead": {
+      "oneOf": [
+        {
+          "$ref": "urn:societas:1:common#/$defs/agent_id"
+        },
+        {
+          "const": "human"
+        }
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "properties": {
+        "decision_refs": {
+          "contains": {
+            "properties": {
+              "role": {
+                "const": "base"
+              }
+            },
+            "required": [
+              "role"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "decision_refs": {
+          "contains": {
+            "properties": {
+              "role": {
+                "const": "candidate"
+              }
+            },
+            "required": [
+              "role"
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -1,0 +1,37 @@
+{
+  "$id": "urn:societas:1:policy_evaluated",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "action",
+    "decision",
+    "rule_id",
+    "reason"
+  ],
+  "properties": {
+    "action": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "mis. tool.call:shell.exec, agent.create, network.access"
+    },
+    "decision": {
+      "enum": [
+        "allow",
+        "require_approval",
+        "deny"
+      ]
+    },
+    "rule_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "reason": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "approval_id": {
+      "$ref": "urn:societas:1:common#/$defs/apr_id"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

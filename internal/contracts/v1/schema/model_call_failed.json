@@ -1,0 +1,19 @@
+{
+  "$id": "urn:societas:1:model_call_failed",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "error",
+    "executed"
+  ],
+  "properties": {
+    "error": {
+      "$ref": "urn:societas:1:error"
+    },
+    "executed": {
+      "type": "boolean",
+      "description": "false jika Token Guard menolak sebelum model dipanggil."
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

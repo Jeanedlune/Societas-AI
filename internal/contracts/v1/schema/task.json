@@ -1,0 +1,240 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:societas:1:task",
+  "title": "Task",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "run_id",
+    "parent_task_id",
+    "title",
+    "goal",
+    "owner",
+    "created_by",
+    "priority",
+    "status",
+    "depth",
+    "attempt",
+    "expected_output",
+    "budget",
+    "working_directory",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "id": {
+      "$ref": "urn:societas:1:common#/$defs/task_id"
+    },
+    "run_id": {
+      "$ref": "urn:societas:1:common#/$defs/run_id"
+    },
+    "parent_task_id": {
+      "oneOf": [
+        {
+          "$ref": "urn:societas:1:common#/$defs/task_id"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "goal": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000
+    },
+    "owner": {
+      "$ref": "urn:societas:1:common#/$defs/agent_id"
+    },
+    "created_by": {
+      "$ref": "urn:societas:1:common#/$defs/actor"
+    },
+    "priority": {
+      "$ref": "urn:societas:1:common#/$defs/priority"
+    },
+    "status": {
+      "enum": [
+        "pending",
+        "ready",
+        "running",
+        "pausing",
+        "paused",
+        "interrupted",
+        "blocked",
+        "awaiting_approval",
+        "completed",
+        "failed",
+        "cancelled"
+      ]
+    },
+    "dependencies": {
+      "type": "array",
+      "items": {
+        "$ref": "urn:societas:1:common#/$defs/task_id"
+      },
+      "uniqueItems": true
+    },
+    "deadline": {
+      "oneOf": [
+        {
+          "$ref": "urn:societas:1:common#/$defs/ts"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "depth": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "attempt": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "expected_output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "artifact",
+            "summary",
+            "decision",
+            "report",
+            "dataset",
+            "draft"
+          ]
+        },
+        "format": {
+          "type": "string",
+          "maxLength": 64
+        }
+      }
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "granted",
+        "used"
+      ],
+      "properties": {
+        "granted": {
+          "$ref": "urn:societas:1:budget"
+        },
+        "used": {
+          "$ref": "urn:societas:1:usage_totals"
+        }
+      }
+    },
+    "artifact_ids": {
+      "type": "array",
+      "items": {
+        "$ref": "urn:societas:1:common#/$defs/art_id"
+      }
+    },
+    "working_directory": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512,
+      "description": "Path direktori kerja yang di-assign oleh Orchestrator untuk task ini. Agent menyimpan output di path ini secara relative. Pattern: /workspace/artifacts/{run_id}/{task_id}/"
+    },
+    "risk_tier": {
+      "enum": [
+        "low",
+        "normal",
+        "high",
+        "critical"
+      ],
+      "default": "normal",
+      "description": "Tier risiko dari evaluasi dinamis workspace.yaml (#23.1, #36); 'high' yang memerlukan approval masuk delivery batch, sedangkan 'critical' memicu synchronous halt dan kunci mutasi hingga human approval (5A.8)."
+    },
+    "risk_tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 64
+      },
+      "uniqueItems": true,
+      "description": "Tag penyebab klasifikasi, mis. 'path:migrations/**', 'intent:deploy'."
+    },
+    "contract_hash": {
+      "oneOf": [
+        {
+          "$ref": "urn:societas:1:common#/$defs/sha256"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Pin SHA256 dari OpenAPI spec / Contract ABI untuk task contract-first (#17.1); task ditandai stale jika spec berubah."
+    },
+    "contract_status": {
+      "enum": [
+        "current",
+        "stale"
+      ],
+      "default": "current",
+      "description": "freshness kontrak terpisah dari status eksekusi; stale memblokir dispatch, review, approval, dan completion sampai re-pin + re-codegen (#17.1)"
+    },
+    "pause_deadline": {
+      "$ref": "urn:societas:1:common#/$defs/ts",
+      "description": "deadline absolut pause yang dipersist; wajib saat pausing/paused dan tetap disimpan setelah interrupted sampai pause diselesaikan atau dibatalkan"
+    },
+    "created_at": {
+      "$ref": "urn:societas:1:common#/$defs/ts"
+    },
+    "updated_at": {
+      "$ref": "urn:societas:1:common#/$defs/ts"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "pausing",
+              "paused"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "required": [
+          "pause_deadline"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "contract_hash": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "contract_hash"
+        ]
+      },
+      "then": {
+        "required": [
+          "contract_status"
+        ]
+      }
+    }
+  ]
+}

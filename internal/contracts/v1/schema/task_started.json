@@ -1,0 +1,15 @@
+{
+  "$id": "urn:societas:1:task_started",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "attempt"
+  ],
+  "properties": {
+    "attempt": {
+      "type": "integer",
+      "minimum": 1
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -1,0 +1,32 @@
+{
+  "$id": "urn:societas:1:task_completed",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "result_status"
+  ],
+  "properties": {
+    "result_status": {
+      "enum": [
+        "success",
+        "partial"
+      ]
+    },
+    "artifact_ids": {
+      "type": "array",
+      "items": {
+        "$ref": "urn:societas:1:common#/$defs/art_id"
+      }
+    },
+    "summary_ids": {
+      "type": "array",
+      "items": {
+        "$ref": "urn:societas:1:common#/$defs/sum_id"
+      }
+    },
+    "usage": {
+      "$ref": "urn:societas:1:usage_totals"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

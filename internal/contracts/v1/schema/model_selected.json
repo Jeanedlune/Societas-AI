@@ -1,0 +1,33 @@
+{
+  "$id": "urn:societas:1:model_selected",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "agent_id",
+    "model",
+    "tier",
+    "reason"
+  ],
+  "properties": {
+    "agent_id": {
+      "$ref": "urn:societas:1:common#/$defs/agent_id"
+    },
+    "model": {
+      "type": "string"
+    },
+    "tier": {
+      "$ref": "urn:societas:1:common#/$defs/tier"
+    },
+    "reason": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "escalated_from": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

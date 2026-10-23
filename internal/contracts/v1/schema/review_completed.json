@@ -1,0 +1,46 @@
+{
+  "$id": "urn:societas:1:review_completed",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "verdict"
+  ],
+  "properties": {
+    "verdict": {
+      "enum": [
+        "approve",
+        "request_changes",
+        "reject"
+      ]
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "severity",
+          "text"
+        ],
+        "properties": {
+          "severity": {
+            "enum": [
+              "info",
+              "minor",
+              "major",
+              "blocker"
+            ]
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        }
+      }
+    },
+    "artifact_id": {
+      "$ref": "urn:societas:1:common#/$defs/art_id"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

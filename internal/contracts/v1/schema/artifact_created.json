@@ -1,0 +1,14 @@
+{
+  "$id": "urn:societas:1:artifact_created",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact"
+  ],
+  "properties": {
+    "artifact": {
+      "$ref": "urn:societas:1:artifact_ref"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -1,0 +1,14 @@
+{
+  "$id": "urn:societas:1:message_received",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "message_id"
+  ],
+  "properties": {
+    "message_id": {
+      "$ref": "urn:societas:1:common#/$defs/msg_id"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

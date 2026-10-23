@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:societas:1:envelope",
+  "title": "Envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version",
+    "schema_version",
+    "id",
+    "type",
+    "ts",
+    "workspace_id",
+    "run_id",
+    "correlation_id",
+    "from",
+    "to",
+    "payload",
+    "principal"
+  ],
+  "properties": {
+    "protocol_version": {
+      "const": "societas/1"
+    },
+    "schema_version": {
+      "type": "string",
+      "pattern": "^[0-9]+$"
+    },
+    "id": {
+      "$ref": "urn:societas:1:common#/$defs/evt_id"
+    },
+    "type": {
+      "type": "string",
+      "pattern": "^[a-z]+(\\.[a-z_]+)+$"
+    },
+    "ts": {
+      "$ref": "urn:societas:1:common#/$defs/ts"
+    },
+    "seq": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Diisi Event Store, bukan pengirim."
+    },
+    "workspace_id": {
+      "type": "string",
+      "pattern": "^ws_[a-z0-9_-]{1,32}$"
+    },
+    "run_id": {
+      "$ref": "urn:societas:1:common#/$defs/run_id"
+    },
+    "task_id": {
+      "$ref": "urn:societas:1:common#/$defs/task_id"
+    },
+    "correlation_id": {
+      "$ref": "urn:societas:1:common#/$defs/cor_id"
+    },
+    "causation_id": {
+      "$ref": "urn:societas:1:common#/$defs/evt_id"
+    },
+    "idempotency_key": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "trace_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{32}$"
+    },
+    "from": {
+      "$ref": "urn:societas:1:common#/$defs/actor"
+    },
+    "to": {
+      "$ref": "urn:societas:1:common#/$defs/address"
+    },
+    "payload": {
+      "type": "object"
+    },
+    "principal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "principal_id",
+        "principal_type",
+        "session_id",
+        "auth_digest"
+      ],
+      "properties": {
+        "principal_id": {
+          "type": "string",
+          "pattern": "^(usr_|agt_|sys_)[0-9A-HJKMNP-TV-Z]{26}$"
+        },
+        "principal_type": {
+          "enum": [
+            "human",
+            "agent",
+            "system"
+          ]
+        },
+        "session_id": {
+          "type": "string",
+          "pattern": "^ses_[0-9A-HJKMNP-TV-Z]{26}$"
+        },
+        "auth_digest": {
+          "type": "string",
+          "pattern": "^hmac_sha256:[0-9a-f]{64}$"
+        }
+      }
+    }
+  }
+}

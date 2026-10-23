@@ -1,0 +1,18 @@
+{
+  "$id": "urn:societas:1:delegate_rejected",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "request_event_id",
+    "error"
+  ],
+  "properties": {
+    "request_event_id": {
+      "$ref": "urn:societas:1:common#/$defs/evt_id"
+    },
+    "error": {
+      "$ref": "urn:societas:1:error"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

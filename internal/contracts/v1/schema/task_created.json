@@ -1,0 +1,14 @@
+{
+  "$id": "urn:societas:1:task_created",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "task"
+  ],
+  "properties": {
+    "task": {
+      "$ref": "urn:societas:1:task"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

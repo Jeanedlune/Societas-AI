@@ -1,0 +1,213 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:societas:1:approval_snapshot",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "snapshot_version",
+    "workspace_id",
+    "run_id",
+    "task_id",
+    "action",
+    "policy_hash",
+    "contract_hash",
+    "inputs"
+  ],
+  "properties": {
+    "snapshot_version": {
+      "const": "approval-snapshot/1"
+    },
+    "workspace_id": {
+      "$ref": "urn:societas:1:envelope#/properties/workspace_id"
+    },
+    "run_id": {
+      "$ref": "urn:societas:1:common#/$defs/run_id"
+    },
+    "task_id": {
+      "oneOf": [
+        {
+          "$ref": "urn:societas:1:common#/$defs/task_id"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "action": {
+      "enum": [
+        "tool.execute",
+        "budget.increase"
+      ]
+    },
+    "policy_hash": {
+      "$ref": "urn:societas:1:common#/$defs/sha256"
+    },
+    "contract_hash": {
+      "$ref": "#/$defs/nullable_hash"
+    },
+    "inputs": {
+      "type": "object"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "tool.execute"
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "then": {
+        "properties": {
+          "task_id": {
+            "$ref": "urn:societas:1:common#/$defs/task_id"
+          },
+          "inputs": {
+            "$ref": "#/$defs/tool_inputs"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "budget.increase"
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "then": {
+        "properties": {
+          "inputs": {
+            "$ref": "#/$defs/budget_inputs"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "nullable_hash": {
+      "oneOf": [
+        {
+          "$ref": "urn:societas:1:common#/$defs/sha256"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "artifact_version": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_id",
+        "version",
+        "checksum"
+      ],
+      "properties": {
+        "artifact_id": {
+          "$ref": "urn:societas:1:common#/$defs/art_id"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "checksum": {
+          "$ref": "urn:societas:1:common#/$defs/sha256"
+        }
+      }
+    },
+    "tool_inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tool_call_id",
+        "tool",
+        "arguments",
+        "operation_key",
+        "resources"
+      ],
+      "properties": {
+        "tool_call_id": {
+          "$ref": "urn:societas:1:common#/$defs/tc_id"
+        },
+        "tool": {
+          "$ref": "urn:societas:1:common#/$defs/tool_name"
+        },
+        "arguments": {
+          "type": "object"
+        },
+        "operation_key": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "resources": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "resource_id",
+              "version"
+            ],
+            "properties": {
+              "resource_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1024
+              },
+              "version": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            }
+          }
+        }
+      }
+    },
+    "budget_inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scope",
+        "target_id",
+        "current_limits",
+        "proposed_limits"
+      ],
+      "properties": {
+        "scope": {
+          "$ref": "urn:societas:1:common#/$defs/scope"
+        },
+        "target_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "current_limits": {
+          "$ref": "urn:societas:1:budget"
+        },
+        "proposed_limits": {
+          "$ref": "urn:societas:1:budget",
+          "minProperties": 1
+        }
+      }
+    }
+  }
+}

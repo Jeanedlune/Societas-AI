@@ -1,0 +1,58 @@
+{
+  "$id": "urn:societas:1:tool_call_completed",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "tool_call_id",
+    "status",
+    "duration_ms"
+  ],
+  "properties": {
+    "tool_call_id": {
+      "$ref": "urn:societas:1:common#/$defs/tc_id"
+    },
+    "status": {
+      "enum": [
+        "ok",
+        "error"
+      ]
+    },
+    "output": {
+      "type": [
+        "string",
+        "object"
+      ],
+      "maxLength": 16000,
+      "description": "string atau object; seluruh payload harus <=16.000 byte UTF-8 setelah serialisasi 72A.12, termasuk overhead JSON — maxLength saja tidak membatasi object"
+    },
+    "output_artifact_id": {
+      "$ref": "urn:societas:1:common#/$defs/art_id"
+    },
+    "truncated": {
+      "type": "boolean"
+    },
+    "duration_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "error": {
+      "$ref": "urn:societas:1:error"
+    }
+  },
+  "if": {
+    "properties": {
+      "status": {
+        "const": "error"
+      }
+    },
+    "required": [
+      "status"
+    ]
+  },
+  "then": {
+    "required": [
+      "error"
+    ]
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -1,0 +1,106 @@
+{
+  "$id": "urn:societas:1:approval_requested",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "approval_id",
+    "action",
+    "reason",
+    "trigger",
+    "risk",
+    "delivery_mode",
+    "bound_hash",
+    "snapshot_ref"
+  ],
+  "properties": {
+    "approval_id": {
+      "$ref": "urn:societas:1:common#/$defs/apr_id"
+    },
+    "action": {
+      "enum": [
+        "tool.execute",
+        "budget.increase"
+      ]
+    },
+    "reason": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "trigger": {
+      "enum": [
+        "policy",
+        "budget"
+      ]
+    },
+    "risk": {
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "description": "Risk wire; task risk_tier normal dipetakan ke medium. Critical tidak pernah digest (I18)."
+    },
+    "delivery_mode": {
+      "enum": [
+        "immediate",
+        "digest"
+      ],
+      "description": "Immediate menghentikan aksi untuk keputusan individual; digest hanya mengatur presentasi antrean high dan tidak memberi otorisasi (I18)."
+    },
+    "bound_hash": {
+      "$ref": "urn:societas:1:common#/$defs/sha256",
+      "description": "sha256: + hex lowercase SHA-256 atas byte JCS seluruh ApprovalSnapshot."
+    },
+    "snapshot_ref": {
+      "$ref": "urn:societas:1:approval_snapshot#/$defs/artifact_version"
+    },
+    "details": {
+      "type": "object"
+    },
+    "expires_at": {
+      "$ref": "urn:societas:1:common#/$defs/ts"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "delivery_mode": {
+            "const": "digest"
+          }
+        },
+        "required": [
+          "delivery_mode"
+        ]
+      },
+      "then": {
+        "properties": {
+          "risk": {
+            "const": "high"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "risk": {
+            "const": "critical"
+          }
+        },
+        "required": [
+          "risk"
+        ]
+      },
+      "then": {
+        "properties": {
+          "delivery_mode": {
+            "const": "immediate"
+          }
+        }
+      }
+    }
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

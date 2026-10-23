@@ -1,0 +1,28 @@
+{
+  "$id": "urn:societas:1:model_call_completed",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "usage",
+    "finish_reason"
+  ],
+  "properties": {
+    "usage": {
+      "$ref": "urn:societas:1:usage"
+    },
+    "finish_reason": {
+      "enum": [
+        "stop",
+        "length",
+        "tool_use",
+        "error"
+      ]
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

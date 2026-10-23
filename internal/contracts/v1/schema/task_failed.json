@@ -1,0 +1,17 @@
+{
+  "$id": "urn:societas:1:task_failed",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "error"
+  ],
+  "properties": {
+    "error": {
+      "$ref": "urn:societas:1:error"
+    },
+    "usage": {
+      "$ref": "urn:societas:1:usage_totals"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

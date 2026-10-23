@@ -1,0 +1,35 @@
+{
+  "$id": "urn:societas:1:task_paused",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "phase",
+    "initiated_by",
+    "pause_deadline"
+  ],
+  "properties": {
+    "phase": {
+      "enum": [
+        "requested",
+        "completed"
+      ],
+      "description": "requested = command pause dari human; completed = pause settle oleh Orchestrator setelah call in-flight selesai (#40.1)"
+    },
+    "initiated_by": {
+      "const": "human:user"
+    },
+    "reason": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "in_flight_call_id": {
+      "$ref": "urn:societas:1:common#/$defs/tc_id",
+      "description": "call yang ditunggu settle saat phase=requested (pause kooperatif)"
+    },
+    "pause_deadline": {
+      "$ref": "urn:societas:1:common#/$defs/ts",
+      "description": "TTL paused, dipersist di SQLite — bukan timer RAM. Semantik pause TTL/in-flight recovery dijelaskan di [DEC-008] W02"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

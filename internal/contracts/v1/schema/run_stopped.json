@@ -1,0 +1,33 @@
+{
+  "$id": "urn:societas:1:run_stopped",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "reason",
+    "totals"
+  ],
+  "properties": {
+    "reason": {
+      "enum": [
+        "success",
+        "budget_exhausted",
+        "timeout",
+        "human_rejected",
+        "critical_tool_failure",
+        "dependency_failed",
+        "max_iterations",
+        "cancelled_by_user"
+      ]
+    },
+    "totals": {
+      "$ref": "urn:societas:1:usage_totals"
+    },
+    "result_artifact_id": {
+      "$ref": "urn:societas:1:common#/$defs/art_id"
+    },
+    "error": {
+      "$ref": "urn:societas:1:error"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

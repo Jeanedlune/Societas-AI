@@ -1,0 +1,39 @@
+{
+  "$id": "urn:societas:1:message_sent",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "message_id",
+    "conversation_id",
+    "text"
+  ],
+  "properties": {
+    "message_id": {
+      "$ref": "urn:societas:1:common#/$defs/msg_id"
+    },
+    "conversation_id": {
+      "$ref": "urn:societas:1:common#/$defs/conv_id"
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 8000
+    },
+    "priority": {
+      "$ref": "urn:societas:1:common#/$defs/priority"
+    },
+    "artifact_ids": {
+      "type": "array",
+      "items": {
+        "$ref": "urn:societas:1:common#/$defs/art_id"
+      }
+    },
+    "reply_to": {
+      "$ref": "urn:societas:1:common#/$defs/msg_id"
+    },
+    "expects_reply": {
+      "type": "boolean"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

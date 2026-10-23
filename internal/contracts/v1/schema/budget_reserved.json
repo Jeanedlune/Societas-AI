@@ -1,0 +1,32 @@
+{
+  "$id": "urn:societas:1:budget_reserved",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "scope",
+    "scope_id",
+    "reservation_id",
+    "max_tokens",
+    "max_cost_usd"
+  ],
+  "properties": {
+    "scope": {
+      "$ref": "urn:societas:1:common#/$defs/scope"
+    },
+    "scope_id": {
+      "type": "string"
+    },
+    "reservation_id": {
+      "type": "string"
+    },
+    "max_tokens": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "max_cost_usd": {
+      "type": "number",
+      "minimum": 0
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

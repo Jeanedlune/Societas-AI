@@ -1,0 +1,22 @@
+{
+  "$id": "urn:societas:1:run_created",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "goal"
+  ],
+  "properties": {
+    "goal": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000
+    },
+    "entry_agent": {
+      "$ref": "urn:societas:1:common#/$defs/agent_id"
+    },
+    "budget_request": {
+      "$ref": "urn:societas:1:budget"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -1,0 +1,66 @@
+{
+  "$id": "urn:societas:1:task_contract_changed",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "phase",
+    "old_hash",
+    "new_hash"
+  ],
+  "properties": {
+    "phase": {
+      "enum": [
+        "invalidated",
+        "repinned"
+      ]
+    },
+    "old_hash": {
+      "$ref": "urn:societas:1:common#/$defs/sha256"
+    },
+    "new_hash": {
+      "$ref": "urn:societas:1:common#/$defs/sha256"
+    },
+    "required_actions": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "recodegen",
+          "rereview",
+          "reapproval"
+        ]
+      }
+    }
+  },
+  "if": {
+    "properties": {
+      "phase": {
+        "const": "invalidated"
+      }
+    },
+    "required": [
+      "phase"
+    ]
+  },
+  "then": {
+    "required": [
+      "required_actions"
+    ],
+    "properties": {
+      "required_actions": {
+        "contains": {
+          "const": "recodegen"
+        }
+      }
+    }
+  },
+  "else": {
+    "not": {
+      "required": [
+        "required_actions"
+      ]
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

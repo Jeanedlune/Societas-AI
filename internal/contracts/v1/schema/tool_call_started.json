@@ -1,0 +1,14 @@
+{
+  "$id": "urn:societas:1:tool_call_started",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "tool_call_id"
+  ],
+  "properties": {
+    "tool_call_id": {
+      "$ref": "urn:societas:1:common#/$defs/tc_id"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:societas:1:summary",
+  "title": "Summary",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "artifact_id",
+    "artifact_version",
+    "token_estimate",
+    "generated_by",
+    "model",
+    "body"
+  ],
+  "properties": {
+    "id": {
+      "$ref": "urn:societas:1:common#/$defs/sum_id"
+    },
+    "artifact_id": {
+      "$ref": "urn:societas:1:common#/$defs/art_id"
+    },
+    "artifact_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "token_estimate": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "generated_by": {
+      "$ref": "urn:societas:1:common#/$defs/actor"
+    },
+    "model": {
+      "type": "string"
+    },
+    "body": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "text"
+      ],
+      "properties": {
+        "text": {
+          "type": "string",
+          "maxLength": 8000
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "risks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "recommendation": {
+          "type": "string"
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

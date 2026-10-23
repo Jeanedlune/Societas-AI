@@ -1,0 +1,18 @@
+{
+  "$id": "urn:societas:1:task_cancelled",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "cancelled_by"
+  ],
+  "properties": {
+    "cancelled_by": {
+      "$ref": "urn:societas:1:common#/$defs/actor"
+    },
+    "reason": {
+      "type": "string",
+      "maxLength": 500
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

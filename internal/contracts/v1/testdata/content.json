@@ -1,0 +1,17 @@
+{
+  "event_type": "artifact.created",
+  "payload": {
+    "artifact": {
+      "id": "art_01ARZ3NDEKTSV4RRFFQ69G5FAV",
+      "name": "content-strategy.md",
+      "kind": "markdown",
+      "path": "artifacts/content-strategy.md",
+      "checksum": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "size_bytes": 1842,
+      "version": 1,
+      "task_id": "TASK-001",
+      "created_by": "agent:content_writer",
+      "created_at": "2026-10-23T12:00:00Z"
+    }
+  }
+}

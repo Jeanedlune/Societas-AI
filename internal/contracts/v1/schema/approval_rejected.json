@@ -1,0 +1,21 @@
+{
+  "$id": "urn:societas:1:approval_rejected",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "approval_id"
+  ],
+  "properties": {
+    "approval_id": {
+      "$ref": "urn:societas:1:common#/$defs/apr_id"
+    },
+    "rejected_by": {
+      "$ref": "urn:societas:1:common#/$defs/actor"
+    },
+    "reason": {
+      "type": "string",
+      "maxLength": 1000
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

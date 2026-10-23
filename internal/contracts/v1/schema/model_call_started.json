@@ -1,0 +1,22 @@
+{
+  "$id": "urn:societas:1:model_call_started",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "model",
+    "tier",
+    "reservation_id"
+  ],
+  "properties": {
+    "model": {
+      "type": "string"
+    },
+    "tier": {
+      "$ref": "urn:societas:1:common#/$defs/tier"
+    },
+    "reservation_id": {
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

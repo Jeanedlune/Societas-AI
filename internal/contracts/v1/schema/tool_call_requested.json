@@ -1,0 +1,32 @@
+{
+  "$id": "urn:societas:1:tool_call_requested",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "tool_call_id",
+    "tool",
+    "arguments"
+  ],
+  "properties": {
+    "tool_call_id": {
+      "$ref": "urn:societas:1:common#/$defs/tc_id"
+    },
+    "tool": {
+      "$ref": "urn:societas:1:common#/$defs/tool_name"
+    },
+    "arguments": {
+      "type": "object"
+    },
+    "timeout_ms": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "operation_key": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "description": "kunci deduplikasi stabil sejak percobaan pertama; hanya menjamin retry jika provider benar-benar menegakkan deduplikasi (I16)"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

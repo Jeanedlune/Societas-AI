@@ -1,0 +1,17 @@
+{
+  "event_type": "artifact.created",
+  "payload": {
+    "artifact": {
+      "id": "art_01ARZ3NDEKTSV4RRFFQ69G5FAW",
+      "name": "market-research.md",
+      "kind": "markdown",
+      "path": "artifacts/market-research.md",
+      "checksum": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "size_bytes": 2310,
+      "version": 1,
+      "task_id": "TASK-002",
+      "created_by": "agent:market_researcher",
+      "created_at": "2026-10-23T12:01:00Z"
+    }
+  }
+}

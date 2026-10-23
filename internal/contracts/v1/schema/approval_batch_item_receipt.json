@@ -1,0 +1,114 @@
+{
+  "$id": "urn:societas:1:approval_batch_item_receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "workspace_id",
+    "run_id",
+    "batch_hash",
+    "batch_ref",
+    "approval_id",
+    "bound_hash",
+    "outcome",
+    "processed_at"
+  ],
+  "properties": {
+    "workspace_id": {
+      "$ref": "urn:societas:1:envelope#/properties/workspace_id"
+    },
+    "run_id": {
+      "$ref": "urn:societas:1:common#/$defs/run_id"
+    },
+    "batch_hash": {
+      "$ref": "urn:societas:1:common#/$defs/sha256"
+    },
+    "batch_ref": {
+      "$ref": "urn:societas:1:approval_snapshot#/$defs/artifact_version"
+    },
+    "approval_id": {
+      "$ref": "urn:societas:1:common#/$defs/apr_id"
+    },
+    "bound_hash": {
+      "$ref": "urn:societas:1:common#/$defs/sha256"
+    },
+    "outcome": {
+      "enum": [
+        "granted",
+        "skipped"
+      ]
+    },
+    "reason": {
+      "enum": [
+        "stale",
+        "expired",
+        "rejected",
+        "already_granted",
+        "risk_changed",
+        "policy_changed",
+        "binding_changed",
+        "dispatch_blocked"
+      ]
+    },
+    "grant_event_id": {
+      "$ref": "urn:societas:1:common#/$defs/evt_id"
+    },
+    "scope": {
+      "const": "once"
+    },
+    "processed_at": {
+      "$ref": "urn:societas:1:common#/$defs/ts"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "outcome": {
+            "const": "granted"
+          }
+        },
+        "required": [
+          "outcome"
+        ]
+      },
+      "then": {
+        "required": [
+          "grant_event_id",
+          "scope"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "outcome": {
+            "const": "skipped"
+          }
+        },
+        "required": [
+          "outcome"
+        ]
+      },
+      "then": {
+        "required": [
+          "reason"
+        ],
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "grant_event_id"
+              ]
+            },
+            {
+              "required": [
+                "scope"
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

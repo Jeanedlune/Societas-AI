@@ -1,0 +1,31 @@
+{
+  "$id": "urn:societas:1:task_resumed",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "initiated_by",
+    "from_status"
+  ],
+  "properties": {
+    "initiated_by": {
+      "enum": [
+        "human:user",
+        "system:orchestrator"
+      ],
+      "description": "human:user (klik resume) atau system:orchestrator (recovery)"
+    },
+    "reason": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "from_status": {
+      "enum": [
+        "pausing",
+        "paused",
+        "interrupted"
+      ],
+      "description": "state sebelum resume — dipakai rekonsiliasi call in-flight. Semantik pause TTL/in-flight recovery dijelaskan di [DEC-008] W02"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

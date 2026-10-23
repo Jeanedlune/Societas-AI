@@ -1,0 +1,18 @@
+{
+  "$id": "urn:societas:1:approval_batch_submitted",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "batch_hash",
+    "batch_ref"
+  ],
+  "properties": {
+    "batch_hash": {
+      "$ref": "urn:societas:1:common#/$defs/sha256"
+    },
+    "batch_ref": {
+      "$ref": "urn:societas:1:approval_snapshot#/$defs/artifact_version"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

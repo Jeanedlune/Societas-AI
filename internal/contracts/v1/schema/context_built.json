@@ -1,0 +1,92 @@
+{
+  "$id": "urn:societas:1:context_built",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "agent_id",
+    "token_budget",
+    "tokens_used",
+    "items"
+  ],
+  "properties": {
+    "agent_id": {
+      "$ref": "urn:societas:1:common#/$defs/agent_id"
+    },
+    "token_budget": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "tokens_used": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "ref",
+          "tokens",
+          "reason"
+        ],
+        "properties": {
+          "kind": {
+            "enum": [
+              "system_prompt",
+              "role",
+              "task",
+              "memory",
+              "artifact",
+              "message",
+              "tool_result"
+            ]
+          },
+          "ref": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "tokens": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 300
+          }
+        }
+      }
+    },
+    "dropped": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "ref",
+          "reason"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "ref": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "reason": {
+            "enum": [
+              "over_budget",
+              "low_relevance",
+              "duplicate",
+              "untrusted"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

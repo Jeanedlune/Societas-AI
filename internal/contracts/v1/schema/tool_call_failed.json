@@ -1,0 +1,30 @@
+{
+  "$id": "urn:societas:1:tool_call_failed",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "tool_call_id",
+    "error",
+    "outcome"
+  ],
+  "properties": {
+    "tool_call_id": {
+      "$ref": "urn:societas:1:common#/$defs/tc_id"
+    },
+    "error": {
+      "$ref": "urn:societas:1:error"
+    },
+    "outcome": {
+      "enum": [
+        "not_started",
+        "outcome_unknown"
+      ],
+      "description": "not_started = tool pasti belum berjalan; outcome_unknown = request mungkin sudah dieksekusi tapi response hilang (I16)"
+    },
+    "duration_ms": {
+      "type": "integer",
+      "minimum": 0
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

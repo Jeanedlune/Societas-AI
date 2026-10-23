@@ -1,0 +1,30 @@
+{
+  "$id": "urn:societas:1:approval_invalidated",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "approval_id",
+    "bound_hash",
+    "reason"
+  ],
+  "properties": {
+    "approval_id": {
+      "$ref": "urn:societas:1:common#/$defs/apr_id"
+    },
+    "bound_hash": {
+      "$ref": "urn:societas:1:common#/$defs/sha256"
+    },
+    "reason": {
+      "enum": [
+        "input_changed",
+        "resource_changed",
+        "policy_changed",
+        "contract_changed",
+        "evidence_changed",
+        "snapshot_unavailable",
+        "expired"
+      ]
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

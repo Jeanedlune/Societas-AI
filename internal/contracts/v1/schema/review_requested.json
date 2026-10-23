@@ -1,0 +1,25 @@
+{
+  "$id": "urn:societas:1:review_requested",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact_ids"
+  ],
+  "properties": {
+    "artifact_ids": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "urn:societas:1:common#/$defs/art_id"
+      }
+    },
+    "criteria": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 300
+      }
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

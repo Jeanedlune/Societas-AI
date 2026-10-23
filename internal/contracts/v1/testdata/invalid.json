@@ -1,0 +1,11 @@
+{
+  "event_type": "approval.requested",
+  "payload": {
+    "approval_id": "not-an-approval-id",
+    "action": "tool.publish",
+    "reason": "Missing required approval binding fields",
+    "trigger": "policy",
+    "risk": "critical",
+    "delivery_mode": "digest"
+  }
+}

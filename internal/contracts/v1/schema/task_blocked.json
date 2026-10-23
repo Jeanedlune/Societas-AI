@@ -1,0 +1,25 @@
+{
+  "$id": "urn:societas:1:task_blocked",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "waiting_on"
+  ],
+  "properties": {
+    "waiting_on": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          {
+            "$ref": "urn:societas:1:common#/$defs/task_id"
+          },
+          {
+            "$ref": "urn:societas:1:common#/$defs/apr_id"
+          }
+        ]
+      }
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

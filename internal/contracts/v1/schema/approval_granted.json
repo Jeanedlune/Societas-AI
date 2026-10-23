@@ -1,0 +1,33 @@
+{
+  "$id": "urn:societas:1:approval_granted",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "approval_id",
+    "bound_hash",
+    "scope",
+    "granted_by"
+  ],
+  "properties": {
+    "approval_id": {
+      "$ref": "urn:societas:1:common#/$defs/apr_id"
+    },
+    "bound_hash": {
+      "$ref": "urn:societas:1:common#/$defs/sha256"
+    },
+    "scope": {
+      "enum": [
+        "once",
+        "task",
+        "run"
+      ]
+    },
+    "granted_by": {
+      "$ref": "urn:societas:1:common#/$defs/actor"
+    },
+    "budget_override": {
+      "$ref": "urn:societas:1:budget"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

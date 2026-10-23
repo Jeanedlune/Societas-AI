@@ -1,0 +1,18 @@
+{
+  "$id": "urn:societas:1:task_assigned",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "task_id",
+    "agent_id"
+  ],
+  "properties": {
+    "task_id": {
+      "$ref": "urn:societas:1:common#/$defs/task_id"
+    },
+    "agent_id": {
+      "$ref": "urn:societas:1:common#/$defs/agent_id"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

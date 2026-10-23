@@ -1,0 +1,45 @@
+{
+  "$id": "urn:societas:1:budget_settled",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "scope",
+    "scope_id",
+    "reservation_id",
+    "usage",
+    "remaining"
+  ],
+  "properties": {
+    "scope": {
+      "$ref": "urn:societas:1:common#/$defs/scope"
+    },
+    "scope_id": {
+      "type": "string"
+    },
+    "reservation_id": {
+      "type": "string"
+    },
+    "usage": {
+      "$ref": "urn:societas:1:usage"
+    },
+    "remaining": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "total_tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cost_usd": {
+          "type": "number",
+          "minimum": 0
+        },
+        "model_calls": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

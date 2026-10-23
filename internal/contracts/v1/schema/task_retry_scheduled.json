@@ -1,0 +1,24 @@
+{
+  "$id": "urn:societas:1:task_retry_scheduled",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "attempt",
+    "delay_ms",
+    "error"
+  ],
+  "properties": {
+    "attempt": {
+      "type": "integer",
+      "minimum": 2
+    },
+    "delay_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "error": {
+      "$ref": "urn:societas:1:error"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

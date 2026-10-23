@@ -1,0 +1,26 @@
+{
+  "$id": "urn:societas:1:task_interrupted",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "previous_status",
+    "reason"
+  ],
+  "properties": {
+    "previous_status": {
+      "enum": [
+        "running",
+        "pausing"
+      ]
+    },
+    "reason": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "in_flight_call_id": {
+      "$ref": "urn:societas:1:common#/$defs/tc_id",
+      "description": "call tool yang hilang saat crash — direkonsiliasi sebelum resume (I16); model call diidentifikasi lewat record reservasi/event terkait"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

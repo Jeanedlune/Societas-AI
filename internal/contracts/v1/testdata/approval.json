@@ -1,0 +1,17 @@
+{
+  "event_type": "approval.requested",
+  "payload": {
+    "approval_id": "apr_01ARZ3NDEKTSV4RRFFQ69G5FAV",
+    "action": "tool.execute",
+    "reason": "Publish the approved content draft",
+    "trigger": "policy",
+    "risk": "high",
+    "delivery_mode": "immediate",
+    "bound_hash": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "snapshot_ref": {
+      "artifact_id": "art_01ARZ3NDEKTSV4RRFFQ69G5FAV",
+      "version": 1,
+      "checksum": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+    }
+  }
+}

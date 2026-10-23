@@ -1,0 +1,29 @@
+{
+  "$id": "urn:societas:1:budget_warning",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "scope",
+    "scope_id",
+    "threshold",
+    "used_ratio"
+  ],
+  "properties": {
+    "scope": {
+      "$ref": "urn:societas:1:common#/$defs/scope"
+    },
+    "scope_id": {
+      "type": "string"
+    },
+    "threshold": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "used_ratio": {
+      "type": "number",
+      "minimum": 0
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

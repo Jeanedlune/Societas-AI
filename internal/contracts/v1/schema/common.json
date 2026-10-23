@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:societas:1:common",
+  "$defs": {
+    "run_id": {
+      "type": "string",
+      "pattern": "^RUN-[0-9]{3,}$"
+    },
+    "task_id": {
+      "type": "string",
+      "pattern": "^TASK-[0-9]{3,}$"
+    },
+    "evt_id": {
+      "type": "string",
+      "pattern": "^evt_[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "msg_id": {
+      "type": "string",
+      "pattern": "^msg_[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "conv_id": {
+      "type": "string",
+      "pattern": "^conv_[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "art_id": {
+      "type": "string",
+      "pattern": "^art_[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "sum_id": {
+      "type": "string",
+      "pattern": "^sum_[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "tc_id": {
+      "type": "string",
+      "pattern": "^tc_[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "apr_id": {
+      "type": "string",
+      "pattern": "^apr_[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "cor_id": {
+      "type": "string",
+      "pattern": "^cor_[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "agent_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]{1,31}$"
+    },
+    "actor": {
+      "type": "string",
+      "pattern": "^(agent|human|system):[a-z][a-z0-9_.-]{0,31}$"
+    },
+    "address": {
+      "type": "string",
+      "pattern": "^(agent|human|system|topic):[a-z][a-z0-9_.-]{0,31}$"
+    },
+    "ts": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "priority": {
+      "enum": [
+        "low",
+        "normal",
+        "high",
+        "critical"
+      ]
+    },
+    "tier": {
+      "enum": [
+        "cheap",
+        "medium",
+        "strong"
+      ]
+    },
+    "scope": {
+      "enum": [
+        "workspace",
+        "run",
+        "task",
+        "agent",
+        "tool"
+      ]
+    },
+    "tool_name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"
+    }
+  }
+}

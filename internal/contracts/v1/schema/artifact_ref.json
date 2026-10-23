@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:societas:1:artifact_ref",
+  "title": "ArtifactRef",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "name",
+    "kind",
+    "checksum",
+    "size_bytes",
+    "version",
+    "task_id",
+    "created_by",
+    "created_at"
+  ],
+  "properties": {
+    "id": {
+      "$ref": "urn:societas:1:common#/$defs/art_id"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255
+    },
+    "kind": {
+      "type": "string",
+      "maxLength": 64,
+      "description": "mis. markdown, json, diff, svg, text, approval_batch; approval_batch memvalidasi content dengan schema ApprovalBatch"
+    },
+    "path": {
+      "type": "string",
+      "maxLength": 1024
+    },
+    "checksum": {
+      "$ref": "urn:societas:1:common#/$defs/sha256"
+    },
+    "size_bytes": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "task_id": {
+      "$ref": "urn:societas:1:common#/$defs/task_id"
+    },
+    "created_by": {
+      "$ref": "urn:societas:1:common#/$defs/actor"
+    },
+    "created_at": {
+      "$ref": "urn:societas:1:common#/$defs/ts"
+    },
+    "superseded_by": {
+      "$ref": "urn:societas:1:common#/$defs/art_id",
+      "description": "opsional — tombstone #19.6; artifact basi, tidak boleh masuk context"
+    },
+    "staleness": {
+      "type": "string",
+      "enum": [
+        "fresh",
+        "stale"
+      ],
+      "default": "fresh",
+      "description": "stale jika sumber berubah, dihapus, atau melewati freshness policy (#19.6)"
+    },
+    "source_refs": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "urn:societas:1:approval_snapshot#/$defs/artifact_version"
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "approval_batch": {
+          "$ref": "urn:societas:1:approval_batch"
+        },
+        "approval_batch_item_receipt": {
+          "$ref": "urn:societas:1:approval_batch_item_receipt"
+        },
+        "review_evidence": {
+          "$ref": "urn:societas:1:approval_snapshot#/$defs/artifact_version"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "$id": "urn:societas:1:artifact_updated",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact",
+    "previous_version"
+  ],
+  "properties": {
+    "artifact": {
+      "$ref": "urn:societas:1:artifact_ref"
+    },
+    "previous_version": {
+      "type": "integer",
+      "minimum": 1
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}
