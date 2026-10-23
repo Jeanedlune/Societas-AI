@@ -8,6 +8,8 @@
 ## Goal
 Definisikan config workspace yang memuat agent, provider, budget, tool capabilities, risk, dan session policy.
 
+**Baseline:** [mekanisme config dan aturan secret](../docs/00-mvp-implementation-baseline.md).
+
 ## Scope
 Buat schema config, defaults, loader, validator, dan contoh general untuk riset, sales, konten, serta editor.
 

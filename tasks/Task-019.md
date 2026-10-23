@@ -8,6 +8,8 @@
 ## Goal
 Pilih provider/model berdasarkan role, task complexity, risk, availability, dan policy.
 
+**Baseline:** [keputusan provider model awal](../docs/00-mvp-implementation-baseline.md). Pemilihan provider nyata tetap Decision required.
+
 ## Scope
 Implementasikan route config, tier mapping, fallback policy, rate limits, and reason logging.
 

@@ -8,6 +8,8 @@
 ## Goal
 Kelola agent roles, provider references, tool capabilities, budget defaults, risk policy, dan session options.
 
+**Baseline:** [workspace config dan secret handling](../docs/00-mvp-implementation-baseline.md).
+
 ## Scope
 Implementasikan settings read/edit/validate, diff preview, save behavior, and secret redaction.
 

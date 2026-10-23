@@ -8,6 +8,8 @@
 ## Goal
 Editor memeriksa draft terhadap brief, evidence, audience, dan policy sebelum hasil diserahkan.
 
+**Baseline:** [workflow strategi konten MVP](../docs/00-mvp-implementation-baseline.md).
+
 ## Scope
 Implementasikan criteria presets, structured findings, verdict, revision request, and artifact binding.
 

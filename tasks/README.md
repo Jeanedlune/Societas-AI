@@ -79,6 +79,7 @@ Backlog ini memecah spesifikasi aktif di `docs/` menjadi 60 task implementasi. J
 
 ## Aturan Eksekusi
 
+- Gunakan [Baseline Implementasi MVP](../docs/00-mvp-implementation-baseline.md) sebagai rujukan Task-001. Task yang menyentuh keputusan di sana harus menautkannya dan tidak boleh mengunci keputusan berstatus **Decision required** tanpa mencatat opsi, dampak, serta owner.
 - Jangan mulai task jika dependency belum selesai atau kontrak interface-nya belum tersedia.
 - Bila task menemukan keputusan produk/teknis yang belum ditentukan, catat opsi, dampak, dan rekomendasi di task; jangan mengarang perilaku diam-diam.
 - Task selesai hanya saat acceptance criteria lulus dan bukti (test, screenshot, trace, atau artifact) dilampirkan.

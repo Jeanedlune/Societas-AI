@@ -8,6 +8,8 @@
 ## Goal
 Sales Analyst membandingkan performa penjualan pada periode dan metrik yang eksplisit.
 
+**Baseline:** [workflow strategi konten MVP](../docs/00-mvp-implementation-baseline.md).
+
 ## Scope
 Implementasikan dataset validation, metric definitions, period comparison, segmentation, and report artifact.
 

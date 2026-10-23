@@ -8,6 +8,8 @@
 ## Goal
 Pastikan publish/send/export eksternal tidak terjadi sebelum approval manusia yang mengikat konten dan target.
 
+**Baseline:** [workflow strategi konten dan approval publikasi](../docs/00-mvp-implementation-baseline.md).
+
 ## Scope
 Implementasikan publish request adapter, normalized target/content snapshot, permission gate, approval dispatch, and receipt.
 

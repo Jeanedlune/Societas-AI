@@ -5,6 +5,20 @@ Implementation backlog: [tasks/README.md](tasks/README.md) dengan task ber-depen
 Nomor section dipertahankan untuk menjaga referensi silang (`#48`, `5A.8`, `72A.5`, `I3`, dst);
 urutan onboarding mengikuti peta dokumen di bawah.
 
+## Menjalankan Server Lokal
+
+Persyaratan: Go 1.26 atau lebih baru. Bootstrap saat ini menyediakan HTTP API minimal tanpa dependency eksternal.
+
+```bash
+go run ./cmd/societas
+```
+
+Server bind ke `127.0.0.1:7443` secara default. Periksa statusnya di `http://127.0.0.1:7443/health`; respons sukses adalah `{"status":"ok"}`. Tekan `Ctrl+C` untuk shutdown dengan graceful.
+
+Untuk mengubah alamat bind, atur `SOCIETAS_ADDR`, misalnya `SOCIETAS_ADDR=127.0.0.1:8080 go run ./cmd/societas`. Server tidak memerlukan credential atau file konfigurasi pada tahap bootstrap ini.
+
+Jalankan smoke test lifecycle dan endpoint dengan `go test ./...`.
+
 Nomor yang loncat (34–35, 73–78, 84, dan lainnya) sengaja dipertahankan dari penomoran spesifikasi awal, bukan tanda ada file hilang.
 
 **Urutan baca linear (onboarding):** Doc 01 §1–5 → Doc 03 §6 (agent lifecycle), §7 (task), §8 (DAG) → Doc 02 §5A (control plane) → kembali ke Doc 03 §7.1/§9 (intake/delegation) → Doc 04–10. Detail intake §7.1 dapat dilewati pada pembacaan pertama; nomor section dan file tetap stabil.

@@ -8,6 +8,8 @@
 ## Goal
 Buktikan satu request strategi konten berjalan dari intake sampai approval publikasi dengan provider/tool mock.
 
+**Baseline:** [workflow end-to-end utama dan penggunaan mock](../docs/00-mvp-implementation-baseline.md).
+
 ## Scope
 Jalankan market research dan sales analysis paralel; hasilnya menjadi input draft, review, dan approval.
 

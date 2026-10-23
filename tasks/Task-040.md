@@ -8,6 +8,8 @@
 ## Goal
 Market Researcher menemukan tren, target audience context, dan kompetitor dengan sumber yang dapat ditelusuri.
 
+**Baseline:** [workflow strategi konten MVP](../docs/00-mvp-implementation-baseline.md).
+
 ## Scope
 Implementasikan research plan, search execution, source collection, comparison, and report artifact.
 

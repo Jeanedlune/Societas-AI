@@ -8,6 +8,8 @@
 ## Goal
 Content Creator menghasilkan draft sesuai audience, channel, brief, brand voice, dan evidence.
 
+**Baseline:** [workflow strategi konten MVP](../docs/00-mvp-implementation-baseline.md).
+
 ## Scope
 Implementasikan draft inputs, claim/source linkage, output formats, revision cycles, and artifact versions.
 

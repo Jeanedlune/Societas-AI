@@ -8,6 +8,8 @@
 ## Goal
 Definisikan interface netral untuk model providers, usage, streaming, timeout, dan error.
 
+**Baseline:** [keputusan provider model awal](../docs/00-mvp-implementation-baseline.md).
+
 ## Scope
 Implementasikan provider adapter boundary, request/response types, capability discovery, secret loading, dan test double.
 

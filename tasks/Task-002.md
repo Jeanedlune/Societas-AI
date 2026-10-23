@@ -8,6 +8,8 @@
 ## Goal
 Buat aplikasi minimal yang bisa dijalankan lokal dari clean checkout sesuai keputusan Task-001.
 
+**Baseline:** [runtime, UI, deployment, storage, dan provider](../docs/00-mvp-implementation-baseline.md).
+
 ## Scope
 Siapkan struktur modul backend, frontend bila dipilih, konfigurasi environment, dan command run/dev.
 
@@ -20,3 +22,10 @@ Siapkan struktur modul backend, frontend bila dipilih, konfigurasi environment, 
 
 ## Handoff
 Jangan membangun modul bisnis di bootstrap ini.
+
+## Hasil
+
+- Server Go lokal tersedia melalui `go run ./cmd/societas`, bind default `127.0.0.1:7443`, dengan `GET /health` dan graceful shutdown pada `Ctrl+C`.
+- Alamat bind dapat diubah melalui `SOCIETAS_ADDR`; bootstrap tidak memerlukan file konfigurasi atau credential.
+- Smoke test proses memulai binary test, memeriksa health endpoint, mengirim interrupt, dan memastikan proses berhenti dengan sukses.
+- Verifikasi: `go test ./...` lulus.

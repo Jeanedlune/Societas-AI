@@ -8,6 +8,8 @@
 ## Goal
 Kemas MVP supaya pengguna dapat setup dan menjalankan workflow general secara lokal.
 
+**Baseline:** [deployment lokal MVP](../docs/00-mvp-implementation-baseline.md).
+
 ## Scope
 Siapkan packaging/build, first-run config, health diagnostics, sample workspace, release notes, and support checklist.
 

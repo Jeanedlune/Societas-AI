@@ -8,6 +8,8 @@
 ## Goal
 Beri pengguna jalur terminal sederhana untuk membuat workspace dan memulai service lokal.
 
+**Baseline:** [deployment lokal dan config workspace](../docs/00-mvp-implementation-baseline.md).
+
 ## Scope
 Implementasikan `init`, `serve`, `start`, `status`, dan `stop` sesuai keputusan Task-001.
 

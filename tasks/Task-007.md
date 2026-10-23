@@ -8,6 +8,8 @@
 ## Goal
 Siapkan operational database lokal untuk workspace, agent, run, task, event, artifact metadata, approval, memory, dan usage.
 
+**Baseline:** [storage operasional dan artifact](../docs/00-mvp-implementation-baseline.md).
+
 ## Scope
 Buat migration runner, schema versi, transaction helper, dan fixture database test.
 

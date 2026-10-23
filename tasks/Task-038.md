@@ -8,6 +8,8 @@
 ## Goal
 Sediakan konfigurasi awal untuk Coordinator, Market Researcher, Sales Analyst, Content Creator, dan Editor.
 
+**Baseline:** [scope MVP general dan workflow utama](../docs/00-mvp-implementation-baseline.md).
+
 ## Scope
 Tulis prompts, tool capabilities, autonomy defaults, output kinds, and review expectations.
 
