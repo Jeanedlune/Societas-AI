@@ -1,6 +1,7 @@
 # Societas — General Multi-Agent Workspace
 
 Societas adalah workspace multi-agent general untuk workflow seperti pembuatan konten, riset pasar, dan analisis penjualan. Sepuluh dokumen spesifikasi aktif berada di `docs/`.
+Implementation backlog: [tasks/README.md](tasks/README.md) dengan task ber-dependency dan acceptance criteria.
 Nomor section dipertahankan untuk menjaga referensi silang (`#48`, `5A.8`, `72A.5`, `I3`, dst);
 urutan onboarding mengikuti peta dokumen di bawah.
 
