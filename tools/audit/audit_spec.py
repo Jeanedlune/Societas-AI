@@ -418,7 +418,11 @@ def audit(root: Path, baseline_ref: str | None) -> dict[str, Any]:
     def check(name: str, passed: bool, detail: Any = "") -> None:
         checks.append({"name": name, "passed": passed, "detail": detail})
 
-    active_paths = list(root.glob("*.md")) + list((root / "docs").rglob("*.md"))
+    active_paths = (
+        list(root.glob("*.md"))
+        + list((root / "docs").rglob("*.md"))
+        + list((root / "tasks").glob("Task-*.md"))
+    )
     archive_link = root / "archive" / "git-engineering-workflows.md"
     if archive_link.exists():
         active_paths.append(archive_link)
@@ -1036,7 +1040,7 @@ def approval_probes(
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parent)
+    parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[2])
     parser.add_argument("--output", type=Path)
     parser.add_argument("--baseline-ref", help="Git ref used to check preservation of existing numbered headings")
     args = parser.parse_args()

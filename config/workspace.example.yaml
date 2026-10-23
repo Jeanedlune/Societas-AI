@@ -1,0 +1,132 @@
+version: "1"
+
+workspace:
+  name: "general-content-workspace"
+
+server:
+  host: "127.0.0.1"
+  port: 7443
+
+transport:
+  event_bus: "go-channel"
+
+providers:
+  mock:
+    credentials: {}
+    options: {}
+
+models:
+  router: "mock/router"
+  policy: "mock/policy"
+  summarizer: "mock/summarizer"
+  research: "mock/research"
+  sales_analyst: "mock/sales"
+  content_creator: "mock/content"
+  editor: "mock/editor"
+
+agents:
+  coordinator:
+    role: "Coordinator"
+    provider: "mock"
+    model: "mock/router"
+    autonomy: 1
+    tools: []
+    permissions: {}
+
+  market_researcher:
+    role: "Market Researcher"
+    provider: "mock"
+    model: "mock/research"
+    autonomy: 2
+    tools:
+      - "browser.search"
+    permissions:
+      web: "approved_sources"
+
+  sales_analyst:
+    role: "Sales Analyst"
+    provider: "mock"
+    model: "mock/sales"
+    autonomy: 2
+    tools:
+      - "spreadsheet.read"
+    permissions:
+      filesystem: "read"
+
+  content_creator:
+    role: "Content Creator"
+    provider: "mock"
+    model: "mock/content"
+    autonomy: 2
+    tools:
+      - "artifact.write"
+    permissions:
+      filesystem: "write"
+
+  editor:
+    role: "Editor"
+    provider: "mock"
+    model: "mock/editor"
+    autonomy: 2
+    tools: []
+    permissions:
+      filesystem: "read"
+
+budget:
+  max_input_tokens: 12000
+  max_output_tokens: 3000
+  max_total_tokens: 15000
+  max_model_calls: 10
+  max_tool_calls: 20
+  max_agent_messages: 40
+  max_time_seconds: 300
+  max_cost_usd: 0.50
+  max_parallel_agents: 4
+  max_rebuttals: 2
+
+tool_capabilities:
+  browser.search:
+    idempotent: true
+    operation_key_enforced: false
+  spreadsheet.read:
+    idempotent: true
+    operation_key_enforced: false
+  artifact.write:
+    idempotent: false
+    operation_key_enforced: false
+
+escalation_lead: "human"
+
+risk:
+  approval_delivery:
+    critical: "immediate"
+    high_mode: "digest"
+    default: "immediate"
+  digest_interval_seconds: 900
+  notify_on_cycle_end: true
+  max_items_per_card: 20
+  path_patterns:
+    critical:
+      - "customer-data/**"
+      - "finance/**"
+      - "published/**"
+      - "credentials/**"
+    high:
+      - "sales-data/**"
+      - "campaigns/**"
+      - "customer-reports/**"
+  intent_keywords:
+    critical:
+      - "delete customer data"
+      - "publish publicly"
+      - "send campaign"
+      - "transfer funds"
+    high:
+      - "export sales data"
+      - "change pricing"
+      - "publish scheduled content"
+
+session_policy:
+  mode: "sticky_until_done"
+  max_turns_before_flush: 15
+  enable_prompt_caching: true

@@ -158,8 +158,9 @@ transport:
 
 providers:
   openrouter:
-    api_key: "$OPENROUTER_API_KEY"
-    analytics_management_key: "$OPENROUTER_MGMT_KEY"  # opsional, audit saja
+    credentials:
+      api_key: "$OPENROUTER_API_KEY"
+      analytics_management_key: "$OPENROUTER_MGMT_KEY"  # opsional, audit saja
 
 models:
   router: jev-latest
@@ -171,6 +172,18 @@ models:
   sales_analyst: strong-model
   editor: medium-model
   ceo: strong-model
+
+budget:
+  max_input_tokens: 12000
+  max_output_tokens: 3000
+  max_total_tokens: 15000
+  max_model_calls: 10
+  max_tool_calls: 20
+  max_agent_messages: 40
+  max_time_seconds: 300
+  max_cost_usd: 0.50
+  max_parallel_agents: 4
+  max_rebuttals: 2
 
 agents:
   ceo:
@@ -272,7 +285,9 @@ session_policy:
   enable_prompt_caching: true
 ```
 
-`providers` mengikuti isolasi key dan accounting di [§32.1](06-permissions-approvals-roles.md#321-provider-usage-accounting-openrouter). `models` memakai pemetaan peran di [5A.8 — Model Router](02-ai-control-plane.md#5a8-model-router). `tool_capabilities` adalah konfigurasi retry tepercaya di [§21](05-artifacts-memory-tools.md#21-tools), bukan klaim dari agen.
+`workspace.yaml` divalidasi oleh loader config Go dengan strict field checking; field yang tidak dikenal ditolak. Budget yang dihilangkan memakai finite defaults dari Doc 02 §5A.2; batas ditetapkan lebih tinggi dari `0` dan enforcement dilakukan runtime. Permission yang tidak diberikan berarti `deny`.
+
+`providers.<id>.credentials` hanya berisi referensi environment dengan bentuk `$ENV_VAR`; literal secret ditolak. Credential di-resolve dari environment saat adapter memintanya dan nilai secret tidak disalin kembali ke konfigurasi. `providers.<id>.options` menampung opsi spesifik adapter dalam namespace provider tersebut. Ini mengikuti isolasi key dan accounting di [§32.1](06-permissions-approvals-roles.md#321-provider-usage-accounting-openrouter). `models` memakai pemetaan alias ke model ID di [5A.8 — Model Router](02-ai-control-plane.md#5a8-model-router). `tool_capabilities` adalah konfigurasi retry tepercaya di [§21](05-artifacts-memory-tools.md#21-tools), bukan klaim dari agen.
 
 `toolchain` bersifat opsional dan menjalankan validator yang relevan dengan artifact/workflow yang dipilih; workspace tanpa validator lokal tetap dapat menggunakan tool jarak jauh sesuai permission. `escalation_lead` memilih agent yang terdaftar atau `human` (#30.1, #48).
 

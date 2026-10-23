@@ -19,6 +19,19 @@ Untuk mengubah alamat bind, atur `SOCIETAS_ADDR`, misalnya `SOCIETAS_ADDR=127.0.
 
 Jalankan smoke test lifecycle dan endpoint dengan `go test ./...`.
 
+## Struktur Implementasi
+
+```text
+cmd/societas/         entrypoint server
+internal/server/      HTTP health endpoint dan lifecycle
+internal/config/      loader, defaults, dan validator workspace config
+config/               contoh workspace.yaml tanpa secret
+tools/audit/          validator spesifikasi dan regression tests
+docs/                 spesifikasi produk aktif
+tasks/                backlog implementasi
+archive/              spesifikasi historis
+```
+
 Nomor yang loncat (34–35, 73–78, 84, dan lainnya) sengaja dipertahankan dari penomoran spesifikasi awal, bukan tanda ada file hilang.
 
 **Urutan baca linear (onboarding):** Doc 01 §1–5 → Doc 03 §6 (agent lifecycle), §7 (task), §8 (DAG) → Doc 02 §5A (control plane) → kembali ke Doc 03 §7.1/§9 (intake/delegation) → Doc 04–10. Detail intake §7.1 dapat dilewati pada pembacaan pertama; nomor section dan file tetap stabil.
@@ -75,20 +88,20 @@ Sepuluh dokumen aktif berfokus pada workflow general. Materi historis berada ter
 
 ## Audit Kontrak
 
-Script audit asli yang dirujuk laporan review tidak disertakan. `audit-spec.py` adalah **pengganti transparan**: ia memeriksa link dokumen aktif dan membaca schema/fixture historis dari `archive/10-contracts-legacy.md`. Konten arsip dipertahankan untuk pemeriksaan kompatibilitas, bukan sebagai requirement MVP aktif.
+Script audit asli yang dirujuk laporan review tidak disertakan. `tools/audit/audit_spec.py` adalah **pengganti transparan**: ia memeriksa link dokumen aktif dan membaca schema/fixture historis dari `archive/10-contracts-legacy.md`. Konten arsip dipertahankan untuk pemeriksaan kompatibilitas, bukan sebagai requirement MVP aktif.
 
 ```bash
 python3 -m venv .venv-audit
-.venv-audit/bin/pip install -r requirements-audit.txt
-.venv-audit/bin/python audit-spec.py --output validation-results.json
-.venv-audit/bin/python test-audit-spec.py
+.venv-audit/bin/pip install -r tools/audit/requirements.txt
+.venv-audit/bin/python tools/audit/audit_spec.py --output validation-results.json
+.venv-audit/bin/python tools/audit/test_audit_spec.py
 # Opsional: periksa semua nomor heading lama tetap ada dan berurutan
-.venv-audit/bin/python audit-spec.py --baseline-ref <commit-sebelum-revisi>
+.venv-audit/bin/python tools/audit/audit_spec.py --baseline-ref <commit-sebelum-revisi>
 # Opsional: checks untuk kode audit
 .venv-audit/bin/pip install ruff==0.11.13 mypy==1.15.0 \
   types-PyYAML==6.0.12.20250915 types-jsonschema==4.25.1.20251009
-.venv-audit/bin/ruff check audit-spec.py test-audit-spec.py
-.venv-audit/bin/mypy audit-spec.py test-audit-spec.py
+.venv-audit/bin/ruff check tools/audit/audit_spec.py tools/audit/test_audit_spec.py
+.venv-audit/bin/mypy tools/audit/audit_spec.py tools/audit/test_audit_spec.py
 ```
 
 Exit `0` = pemeriksaan statis lulus; exit `1` = kegagalan parse/schema/registry/contoh/fixture/probe/penomoran/referensi dokumentasi. Audit memeriksa sintaks JSON/YAML, Draft 2020-12, ID unik, `$ref`, registry, schema yatim, contoh kanonik, tabel transisi, aggregate payload, serta fixture approval historis. Audit juga memeriksa fence tertutup, keberadaan nomor 5A/72A di prose, target file/anchor tautan Markdown aktif, kecocokan nomor label dengan section target, daftar wire event bertanda `<!-- event-types -->`, dan kelengkapan field contoh `<!-- example:workspace.yaml -->`.

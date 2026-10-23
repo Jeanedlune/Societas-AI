@@ -22,3 +22,11 @@ Buat schema config, defaults, loader, validator, dan contoh general untuk riset,
 
 ## Handoff
 Provider-specific fields harus berada di adapter/config namespace terpisah.
+
+## Hasil
+
+- Schema Go dan strict YAML loader tersedia di `internal/config`; error validasi menyebut path field.
+- Default budget finite dan default permission `deny`; role dan model agent tetap config-driven.
+- Contoh general di `config/workspace.example.yaml` memuat coordinator, riset pasar, sales, content creator, dan editor tanpa provider berbayar atau secret literal.
+- Credential provider berada di `providers.<id>.credentials` sebagai environment reference dan dibaca saat adapter meminta credential.
+- Verifikasi: `go test ./...` lulus.

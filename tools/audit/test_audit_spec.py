@@ -5,8 +5,8 @@ from pathlib import Path
 import tempfile
 import unittest
 
-ROOT = Path(__file__).resolve().parent
-SPEC = importlib.util.spec_from_file_location("societas_audit", ROOT / "audit-spec.py")
+ROOT = Path(__file__).resolve().parents[2]
+SPEC = importlib.util.spec_from_file_location("societas_audit", Path(__file__).resolve().parent / "audit_spec.py")
 assert SPEC and SPEC.loader
 AUDIT = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(AUDIT)
@@ -18,7 +18,10 @@ class AuditTests(unittest.TestCase):
             root = Path(directory)
             for path in ROOT.rglob("*.md"):
                 text = path.read_text(encoding="utf-8")
-                if before and path.name == filename:
+                matches_filename = path.name == filename
+                if filename == "README.md":
+                    matches_filename = path == ROOT / "README.md"
+                if before and matches_filename:
                     self.assertIn(before, text)
                     text = text.replace(before, after, 1)
                 destination = root / path.relative_to(ROOT)
